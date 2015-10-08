@@ -33,6 +33,19 @@ class valid_grasps():
         self.table_transform = np.genfromtxt(self.path+'/transformation_matrices/essential_transform/Table_transform.csv',delimiter = ',')
         self.robot.SetTransform(self.robot_transform)
         self.Table.SetTransform(self.table_transform)
+        if not self.env.GetCollisionChecker().SetCollisionOptions(CollisionOptions.Distance | CollisionOptions.Contacts):
+            collisionChecker = RaveCreateCollisionChecker(self.env,'pqp')
+            collisionChecker.SetCollisionOptions(CollisionOptions.Distance|CollisionOptions.Contacts)
+            self.env.SetCollisionChecker(collisionChecker)
+        self.report = CollisionReport()
+        self.finger_1_prox = self.robot.GetLinks[12]
+        self.finger_1_med = self.robot.GetLinks[13]
+        self.finger_1_dist = self.robot.GetLinks[14]
+        self.finger_2_prox = self.robot.GetLinks[16]
+        self.finger_2_med = self.robot.GetLinks[17]
+        self.finger_2_dist = self.robot.GetLinks[18]
+        self.finger_3_med = self.robot.GetLinks[20]
+        self.finger_3_dist = self.robot.GetLinks[21]
 
     def get_obj_name(self):
         Fid = open(self.path+"/models/stl_files/part_list.csv")
@@ -44,14 +57,32 @@ class valid_grasps():
         Fid.close()
         return obj_name
 
-#    def update_environment(self):
-#        
-#        try:
-#            while True:
-#                n=1
-#        except KeyboardInterrupt, e:
-#            print 'exiting', e
-#            sys.exit()
+    def update_environment(self):
+        try:
+            while True:
+                finger_1_prox_vs_part = self.env.CheckCollision(part,self.finger_1_prox,report=self.report)
+                dist_finger_1_prox_vs_part = self.report.minDistance
+                finger_1_med_vs_part = self.env.CheckCollision(part,self.finger_1_med,report = self.report)
+                dist_finger_1_med_vs_part = self.report.minDistance
+                finger_1_dist_vs_part = self.env.CheckCollision(part,self.finger_1_dist,report = self.report)
+                dist_finger_1_dist_vs_part = self.report.minDistance
+                finger_2_prox_vs_part = self.env.CheckCollision(part,self.finger_2_prox,report=self.report)                 
+                dist_finger_2_prox_vs_part = self.report.minDistance
+                finger_2_med_vs_part = self.env.CheckCollision(part,self.finger_2_med,report = self.report)
+                dist_finger_2_med_vs_part = self.report.minDistance
+                finger_2_dist_vs_part = self.env.CheckCollision(part,self.finger_2_dist,report = self.report)
+                dist_finger_1_dist_vs_part = self.report.minDistance
+                finger_3_prox_vs_part = self.env.CheckCollision(part,self.finger_3_prox,report=self.report)
+                dist_finger_3_prox_vs_part = self.report.minDistance
+                finger_3_med_vs_part = self.env.CheckCollision(part,self.finger_3_med,report = self.report)
+                dist_finger_3_med_vs_part = self.report.minDistance
+                finger_3_dist_vs_part = self.env.CheckCollision(part,self.finger_3_dist,report = self.report)
+                dist_finger_3_dist_vs_part = self.report.minDistance                                                 
+        
+        except rospy.ROSInterruptException, e:
+            print 'exiting', e
+            sys.exit()
+
     def robot_updator(self,snapshot):
         T_hand = np.array(snapshot.hand_joints.position)
         rospy.loginfo("Got into robot_updator")
@@ -93,4 +124,4 @@ if __name__=="__main__":
     generate_grasp.sub_robot = rospy.Subscriber("grasp_extremes",GraspSnapshot,generate_grasp.robot_updator)
     generate_grasp.sub_part = rospy.Subscriber("grasp_extremes",GraspSnapshot,generate_grasp.part_updator)
     rospy.spin()
-#    generate_grasp.update_environment()
+    generate_grasp.update_environment()
