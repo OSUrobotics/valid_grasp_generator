@@ -24,7 +24,7 @@ def get_hand_matrix(transform):
     return all_int_values
 
 
-def generate_matrix(filename):
+def get_matrix(filename):
     fileid = open(filename,'r')
     lines = fileid.readlines()
     fileid.close()

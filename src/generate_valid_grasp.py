@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-
 from openravepy import *
 import rospy
 import rospkg
 import sys,getopt
 import csv
+from and_gate import *
+from get_all_contact_values import *
 from grasp_manager.msg import GraspSnapshot
 from shared_global import *
 from get_matrix import *
@@ -29,23 +30,26 @@ class valid_grasps():
         self.ext_opt_num = None # variable for recording the optimal or extreme number
         self.obj_transform = None
         self.previous_obj_name = None
+        self.contact_point_index = None
         self.robot_transform = np.genfromtxt(self.path+'/transformation_matrices/essential_transform/Wam_transform.csv',delimiter = ',')
         self.table_transform = np.genfromtxt(self.path+'/transformation_matrices/essential_transform/Table_transform.csv',delimiter = ',')
         self.robot.SetTransform(self.robot_transform)
         self.Table.SetTransform(self.table_transform)
+        self.contact_matrix = []
         if not self.env.GetCollisionChecker().SetCollisionOptions(CollisionOptions.Distance | CollisionOptions.Contacts):
             collisionChecker = RaveCreateCollisionChecker(self.env,'pqp')
             collisionChecker.SetCollisionOptions(CollisionOptions.Distance|CollisionOptions.Contacts)
             self.env.SetCollisionChecker(collisionChecker)
         self.report = CollisionReport()
-        self.finger_1_prox = self.robot.GetLinks[12]
-        self.finger_1_med = self.robot.GetLinks[13]
-        self.finger_1_dist = self.robot.GetLinks[14]
-        self.finger_2_prox = self.robot.GetLinks[16]
-        self.finger_2_med = self.robot.GetLinks[17]
-        self.finger_2_dist = self.robot.GetLinks[18]
-        self.finger_3_med = self.robot.GetLinks[20]
-        self.finger_3_dist = self.robot.GetLinks[21]
+        self.links = self.robot.GetLinks()
+        self.finger_1_prox = self.links[12]
+        self.finger_1_med = self.links[13]
+        self.finger_1_dist = self.links[14]
+        self.finger_2_prox = self.links[16]
+        self.finger_2_med = self.links[17]
+        self.finger_2_dist = self.links[18]
+        self.finger_3_med = self.links[20]
+        self.finger_3_dist = self.links[21]
 
     def get_obj_name(self):
         Fid = open(self.path+"/models/stl_files/part_list.csv")
@@ -99,13 +103,20 @@ class valid_grasps():
         self.grasp_num = get_data.grasp_num
         self.is_optimal = get_data.is_optimal
         obj_folder = 'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_pointcloud_csvfiles/'
+        grasp_type = None
         if self.is_optimal:
             self.ext_opt_num = get_data.optimal_num
+            grasp_type = 'optimal'
             file_name = obj_transform_dir+obj_folder+'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_grasp'+str(self.grasp_num)+'_optimal'+str(self.ext_opt_num)+'_object_transform.txt'
         else:
+            grasp_type = 'extreme'
             self.ext_opt_num = get_data.extreme_num
             file_name = obj_transform_dir+obj_folder+'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_grasp'+str(self.grasp_num)+'_extreme'+str(self.ext_opt_num)+'_object_transform.txt'
-        matrix = generate_matrix(file_name)
+        matrix = get_matrix(file_name)
+        grasp_all_contact_file = 'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_all_grasps_contact_points.csv'
+        self.contact_matrix = get_contact_values(grasp_all_contact_file)
+        index_matrix = self.contact_matrix[:][0:5] == [str(self.obj_num),str(self.sub_num),str(self.grasp_num),grasp_type,str(self.ext_opt_num)]
+        self.contact_point_index = get_index(index_matrix)
         self.obj_transform = matrix['obj_matrix']
         self.obj_name = self.get_obj_name()
         if (self.part == None) or (not self.obj_name == self.previous_obj_name):
@@ -123,5 +134,4 @@ if __name__=="__main__":
     rospy.init_node('valid_grasp_generator',anonymous = True)
     generate_grasp.sub_robot = rospy.Subscriber("grasp_extremes",GraspSnapshot,generate_grasp.robot_updator)
     generate_grasp.sub_part = rospy.Subscriber("grasp_extremes",GraspSnapshot,generate_grasp.part_updator)
-    rospy.spin()
     generate_grasp.update_environment()
