@@ -68,6 +68,13 @@ class valid_grasps():
                 dist_finger_1_prox_vs_part = self.report.minDistance
                 finger_1_med_vs_part = self.env.CheckCollision(part,self.finger_1_med,report = self.report)
                 dist_finger_1_med_vs_part = self.report.minDistance
+                if self.contact_matrix[self.contact_point_index] == '1':
+                    if not finger_1_med_vs_part:
+                        if dist_finger_1_med_vs_part> 0.01:
+                            # move the joint of finger 
+                            # note that the joint of med should be scaled properly
+                    else:
+                        # move finger backwords until the distance between finger and joint is 0.01
                 finger_1_dist_vs_part = self.env.CheckCollision(part,self.finger_1_dist,report = self.report)
                 dist_finger_1_dist_vs_part = self.report.minDistance
                 finger_2_prox_vs_part = self.env.CheckCollision(part,self.finger_2_prox,report=self.report)                 
