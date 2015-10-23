@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(Valid_grasp_generator)
+project(valid_grasp_generator)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)

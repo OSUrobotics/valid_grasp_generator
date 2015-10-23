@@ -31,6 +31,9 @@ class valid_grasps():
         self.obj_transform = None
         self.previous_obj_name = None
         self.contact_point_index = None
+        self.points_inside_obj = None
+        self.no_samples = rospy.get_param('no_of_samples')
+        self.sampling_delta = None
         self.robot_transform = np.genfromtxt(self.path+'/transformation_matrices/essential_transform/Wam_transform.csv',delimiter = ',')
         self.table_transform = np.genfromtxt(self.path+'/transformation_matrices/essential_transform/Table_transform.csv',delimiter = ',')
         self.robot.SetTransform(self.robot_transform)
@@ -63,40 +66,32 @@ class valid_grasps():
 
     def update_environment(self):
         try:
+            self.points_inside_obj = self.get_points()
             while True:
-                finger_1_prox_vs_part = self.env.CheckCollision(part,self.finger_1_prox,report=self.report)
+                finger_1_prox_vs_part = self.env.CheckCollision(self.part,self.finger_1_prox,report=self.report)
                 dist_finger_1_prox_vs_part = self.report.minDistance
-                finger_1_med_vs_part = self.env.CheckCollision(part,self.finger_1_med,report = self.report)
+                finger_1_med_vs_part = self.env.CheckCollision(self.part,self.finger_1_med,report = self.report)
                 dist_finger_1_med_vs_part = self.report.minDistance
-                if self.contact_matrix[self.contact_point_index] == '1':
-                    if not finger_1_med_vs_part:
-                        if dist_finger_1_med_vs_part> 0.01:
-                            # move the joint of finger 
-                            # note that the joint of med should be scaled properly
-                    else:
-                        # move finger backwords until the distance between finger and joint is 0.01
-                finger_1_dist_vs_part = self.env.CheckCollision(part,self.finger_1_dist,report = self.report)
+                finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
                 dist_finger_1_dist_vs_part = self.report.minDistance
-                finger_2_prox_vs_part = self.env.CheckCollision(part,self.finger_2_prox,report=self.report)                 
+                finger_2_prox_vs_part = self.env.CheckCollision(self.part,self.finger_2_prox,report=self.report)                 
                 dist_finger_2_prox_vs_part = self.report.minDistance
-                finger_2_med_vs_part = self.env.CheckCollision(part,self.finger_2_med,report = self.report)
+                finger_2_med_vs_part = self.env.CheckCollision(self.part,self.finger_2_med,report = self.report)
                 dist_finger_2_med_vs_part = self.report.minDistance
-                finger_2_dist_vs_part = self.env.CheckCollision(part,self.finger_2_dist,report = self.report)
+                finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
                 dist_finger_1_dist_vs_part = self.report.minDistance
-                finger_3_prox_vs_part = self.env.CheckCollision(part,self.finger_3_prox,report=self.report)
+                finger_3_prox_vs_part = self.env.CheckCollision(self.part,self.finger_3_prox,report=self.report)
                 dist_finger_3_prox_vs_part = self.report.minDistance
-                finger_3_med_vs_part = self.env.CheckCollision(part,self.finger_3_med,report = self.report)
+                finger_3_med_vs_part = self.env.CheckCollision(self.part,self.finger_3_med,report = self.report)
                 dist_finger_3_med_vs_part = self.report.minDistance
-                finger_3_dist_vs_part = self.env.CheckCollision(part,self.finger_3_dist,report = self.report)
+                finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
                 dist_finger_3_dist_vs_part = self.report.minDistance                                                 
-        
         except rospy.ROSInterruptException, e:
             print 'exiting', e
             sys.exit()
 
     def robot_updator(self,snapshot):
         T_hand = np.array(snapshot.hand_joints.position)
-        rospy.loginfo("Got into robot_updator")
         T_wam = np.array(snapshot.wam_joints.position)
         T_robot = T_wam[0:7]
         T_robot = np.append(T_robot,[0,0])
@@ -106,7 +101,6 @@ class valid_grasps():
     def part_updator(self,get_data):
         self.obj_num = get_data.obj_num
         self.sub_num = get_data.sub_num
-        rospy.loginfo("Got into part_updator")
         self.grasp_num = get_data.grasp_num
         self.is_optimal = get_data.is_optimal
         obj_folder = 'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_pointcloud_csvfiles/'
@@ -132,12 +126,28 @@ class valid_grasps():
             self.part = self.env.ReadKinBodyXMLFile(self.path+"/models/stl_files/"+self.obj_name,{'scalegeometry':'0.001 0.001 0.001'})
             self.previous_obj_name = self.obj_name
             self.env.Add(self.part)
-
         self.part.SetTransform(self.obj_transform)
+
+    def get_points():
+        cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.part)
+        if not cdmodel.load():
+            cdmodel.autogenerate()
+        ab = self.part.ComputeAABB()
+        boxmin = ab.pos() - ab.extents()
+        boxmax = ab.pos()+ ab.extents()
+        self.sampling_delta = np.linalg.norm(ab.extents())/self.no_of_samples
+        X,Y,Z = numpy.mgrid[boxmin[0]:boxmax[0]:self.sampling_delta,boxmin[1]:boxmax[1]:self.sampling_delta,boxmin[2]:boxmax[2]:self.sampling_delta]
+        points = np.c_[X.flat,Y.flat,Z.flat]
+        tested_points = cdmodel.testPointsInside(points)
+        inside_points = points[np.flatnonzero(tested_points),:]
+        return inside_points
+        
+        
         
 
 if __name__=="__main__":
     generate_grasp = valid_grasps()
+    rospy.set_param('no_of_samples',30)
     rospy.init_node('valid_grasp_generator',anonymous = True)
     generate_grasp.sub_robot = rospy.Subscriber("grasp_extremes",GraspSnapshot,generate_grasp.robot_updator)
     generate_grasp.sub_part = rospy.Subscriber("grasp_extremes",GraspSnapshot,generate_grasp.part_updator)
