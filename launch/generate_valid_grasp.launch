@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+    <rosparam command ="load" file="$(find valid_grasp_generator)/parameter.yaml" />
+    <node name="valid_grasp_generator" pkg="valid_grasp_generator" type="generate_valid_grasp.py" output="screen" />
+</launch>

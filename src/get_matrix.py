@@ -34,6 +34,14 @@ def get_matrix(filename):
     hand_matrix = get_hand_matrix(hand_transformation)
     return {'obj_matrix':obj_matrix, 'hand_matrix':hand_matrix}
 
+def get_index(index_matrix):
+    for i in range(len(index_matrix)):
+        if index_matrix[i][0] == True:
+            if index_matrix[i][1] == True:
+                if index_matrix[i][2] == True:
+                    if index_matrix[i][3] == True:
+                        if index_matrix[i][4] == True:
+                            return i
 
 
 
