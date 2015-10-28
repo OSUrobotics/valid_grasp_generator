@@ -1,1 +1,3 @@
 no_of_samples: 100
+increment_value: 1
+translational_limit: 100

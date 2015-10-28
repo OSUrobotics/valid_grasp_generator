@@ -10,6 +10,7 @@ from grasp_manager.msg import GraspSnapshot
 from shared_global import *
 from get_matrix import *
 import numpy as np
+import timeit
 
 class valid_grasps():
     def __init__(self):
@@ -33,6 +34,8 @@ class valid_grasps():
         self.contact_point_index = None
         self.points_inside_obj = None
         self.no_samples = rospy.get_param('no_of_samples')
+        self.increment = rospy.get_param('increment_value')
+        self.max_translational_limit = rospy.get_param('translational_limit')
         self.sampling_delta = None
         self.robot_transform = np.genfromtxt(self.path+'/transformation_matrices/essential_transform/Wam_transform.csv',delimiter = ',')
         self.table_transform = np.genfromtxt(self.path+'/transformation_matrices/essential_transform/Table_transform.csv',delimiter = ',')
@@ -53,6 +56,13 @@ class valid_grasps():
         self.finger_2_dist = self.links[18]
         self.finger_3_med = self.links[20]
         self.finger_3_dist = self.links[21]
+        self.palm_link = self.links[9]
+        self.count_inside_points = None
+        #self.plot_points = None
+        self.part_cdmodel = None
+
+
+
 
     def get_obj_name(self):
         Fid = open(self.path+"/models/stl_files/part_list.csv")
@@ -66,24 +76,127 @@ class valid_grasps():
 
     def update_environment(self):
         try:
+            self.part_cdmodel =  databases.convexdecomposition.ConvexDecompositionModel(self.part)
+            if not self.part_cdmodel.load():
+                self.part_cdmodel.autogenerate()            
+            start = timeit.default_timer()
             rospy.loginfo("Got grasp_extremes")
-            #while True:
-            #    finger_1_prox_vs_part = self.env.CheckCollision(self.part,self.finger_1_prox,report=self.report)
-            #    dist_finger_1_prox_vs_part = self.report.minDistance
-            #    finger_1_med_vs_part = self.env.CheckCollision(self.part,self.finger_1_med,report = self.report)
-            #    dist_finger_1_med_vs_part = self.report.minDistance
-            #    finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
-            #    dist_finger_1_dist_vs_part = self.report.minDistance
-            #    finger_2_prox_vs_part = self.env.CheckCollision(self.part,self.finger_2_prox,report=self.report)                 
-            #    dist_finger_2_prox_vs_part = self.report.minDistance
-            #    finger_2_med_vs_part = self.env.CheckCollision(self.part,self.finger_2_med,report = self.report)
-            #    dist_finger_2_med_vs_part = self.report.minDistance
-            #    finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
-            #    dist_finger_1_dist_vs_part = self.report.minDistance
-            #    finger_3_med_vs_part = self.env.CheckCollision(self.part,self.finger_3_med,report = self.report)
-            #    dist_finger_3_med_vs_part = self.report.minDistance
-            #    finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
-            #    dist_finger_3_dist_vs_part = self.report.minDistance                                                 
+            #self.list_of_transformations = self.get_transformation_matrices()
+            current_transform = self.part.GetTransform()
+            self.points_inside_obj = self.get_points()
+            end = timeit.default_timer()
+            print "time taken for getting points", end-start
+            recommended_transform = current_transform
+            #self.plot_points = self.env.plot3(self.points_inside_obj,2)
+            robot_cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
+            if not robot_cdmodel.load():
+                robot_cdmodel.autogenerate()
+            previous_points = robot_cdmodel.testPointsInside(self.points_inside_obj)
+            previous_counts = len(previous_points)
+            print self.part.GetTransform()
+            for i in range(-1*self.max_translational_limit, self.max_translational_limit, self.increment):#(0,50000,100)
+                for j in range(-1*self.max_translational_limit, self.max_translational_limit, self.increment):
+                    for k in range(-1*self.max_translational_limit,self.max_translational_limit, self.increment):
+                        previous_transform = recommended_transform
+                        new_transform = previous_transform
+                        new_transform[3,0] = previous_transform[3,0] + i/1000.00
+                        new_transform[3,1] = previous_transform[3,1] + j/1000.00
+                        new_transform[3,2] = previous_transform[3,2] + k/1000.00
+                        print new_transform
+                        self.part.SetTransform(new_transform)
+                        #self.plot_points.SetTransform(new_transform)
+                        new_points = robot_cdmodel.testPointsInside(self.points_inside_obj)
+                        new_counts = len(new_points)
+                        if new_counts<previous_counts:
+                            recommended_transform = new_transform
+                       
+                        current_joint_value = self.contact_matrix[self.contact_point_index]
+                   
+                        finger_1_prox_vs_part = self.env.CheckCollision(self.part,self.finger_1_prox,report=self.report)
+                        dist_finger_1_prox_vs_part = self.report.minDistance
+
+                        if (finger_1_prox_vs_part == True and current_joint_value[11] == '1') or (finger_1_prox_vs_part == False and current_joint_value[11] == '0'):
+                            pass
+                        else:
+                            recommended_transform = previous_transform
+                            break
+
+                        finger_1_med_vs_part = self.env.CheckCollision(self.part,self.finger_1_med,report = self.report)
+                        dist_finger_1_med_vs_part = self.report.minDistance
+
+                        if (finger_1_med_vs_part == True and current_joint_value[8] == '1') or (finger_1_med_vs_part == False and current_joint_value[8] == '0'):
+                            pass
+                        else:
+                            recommended_transform = previous_transform
+                            break
+
+                        finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
+                        dist_finger_1_dist_vs_part = self.report.minDistance
+
+                        if (finger_1_dist_vs_part == True and current_joint_value[5] == '1') or (finger_1_dist_vs_part == False and current_joint_value[5] == '0'):
+                            pass
+                        else:
+                            recommended_transform = previous_transform
+                            break
+
+                        finger_2_prox_vs_part = self.env.CheckCollision(self.part,self.finger_2_prox,report=self.report)                 
+                        dist_finger_2_prox_vs_part = self.report.minDistance
+                        
+                        if (finger_2_prox_vs_part == True and current_joint_value[12] == '1') or (finger_2_prox_vs_part == False and current_joint_value[12] == '0'):
+                            pass
+                        else:
+                            recommended_transform = previous_transform
+                            break
+
+                        finger_2_med_vs_part = self.env.CheckCollision(self.part,self.finger_2_med,report = self.report)
+                        dist_finger_2_med_vs_part = self.report.minDistance
+
+
+                        if (finger_2_med_vs_part == True and current_joint_value[9] == '1') or (finger_2_med_vs_part == False and current_joint_value[9] == '0'):
+                            pass
+                        else:
+                            recommended_transform = previous_transform
+                            break
+
+                        finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
+                        dist_finger_1_dist_vs_part = self.report.minDistance
+                        
+                        if (finger_2_dist_vs_part == True and current_joint_value[13] == '1') or (finger_2_dist_vs_part == False and current_joint_value[13] == '0'):                       
+                             pass   
+                        else:
+                             recommended_transform = previous_transform
+                             break
+                        
+                        finger_3_med_vs_part = self.env.CheckCollision(self.part,self.finger_3_med,report = self.report)
+                        dist_finger_3_med_vs_part = self.report.minDistance
+
+                        if (finger_3_med_vs_part == True and current_joint_value[10] == '1') or (finger_3_med_vs_part == False and current_joint_value[10] == '0'):                       
+                             pass   
+                        else:
+                            recommended_transform = previous_transform
+                            break
+
+                        finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
+                        dist_finger_3_dist_vs_part = self.report.minDistance                                                 
+
+                        if (finger_3_dist_vs_part == True and current_joint_value[7] == '1') or (finger_3_dist_vs_part == False and current_joint_value[7] == '0'):                       
+                             pass   
+                        else:
+                            recommended_transform = previous_transform
+                            break                                                                                                                                                                  
+                        palm_vs_part = self.env.CheckCollision(self.part,self.palm_link,report = self.report)
+                        dist_palm_vs_part = self.report.minDistance
+
+                        if (palm_vs_part == True and current_joint_value[14] == '1') or (palm_vs_part == True and current_joint_value[13] == '1') or (palm_vs_part == False and current_joint_value[14] == '0') or (palm_vs_part == False and current_joint_value[13] == '0'):
+                            pass
+                        else:
+                            recommended_transform = previous_transform
+                            break
+                        
+                        self.part.SetTransform(recommended_transform)
+                        #self.plot_points.SetTransform(recommended_transform)
+            end = timeit.default_timer()
+            print "Done !! time taken: ", (end-start)
         except rospy.ROSInterruptException, e:
             print 'exiting', e
             sys.exit()
@@ -116,7 +229,6 @@ class valid_grasps():
         contact_matrix = get_contact_values(grasp_all_contact_file)
         self.contact_matrix = np.array(contact_matrix)
         index_matrix = self.contact_matrix[:,0:5] == [str(self.obj_num),str(self.sub_num),str(self.grasp_num),grasp_type,str(self.ext_opt_num)]
-        print "index matrix",index_matrix
         self.contact_point_index = get_index(index_matrix)
         self.obj_transform = matrix['obj_matrix']
         self.obj_name = self.get_obj_name()
@@ -127,19 +239,15 @@ class valid_grasps():
             self.previous_obj_name = self.obj_name
             self.env.Add(self.part)
         self.part.SetTransform(self.obj_transform)
-        self.points_inside_obj = self.get_points()
 
     def get_points(self):
-        cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.part)
-        if not cdmodel.load():
-            cdmodel.autogenerate()
         ab = self.part.ComputeAABB()
         boxmin = ab.pos() - ab.extents()
         boxmax = ab.pos()+ ab.extents()
         self.sampling_delta = np.linalg.norm(ab.extents())/self.no_samples
         X,Y,Z = numpy.mgrid[boxmin[0]:boxmax[0]:self.sampling_delta,boxmin[1]:boxmax[1]:self.sampling_delta,boxmin[2]:boxmax[2]:self.sampling_delta]
         points = np.c_[X.flat,Y.flat,Z.flat]
-        tested_points = cdmodel.testPointsInside(points)
+        tested_points = self.part_cdmodel.testPointsInside(points)
         inside_points = points[np.flatnonzero(tested_points),:]
         return inside_points
         
