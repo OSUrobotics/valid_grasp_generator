@@ -4,7 +4,6 @@ import rospy
 import rospkg
 import sys,getopt
 import csv
-#from and_gate import *
 from get_all_contact_values import *
 from grasp_manager.msg import GraspSnapshot
 from shared_global import *
@@ -33,12 +32,11 @@ class valid_grasps():
         self.previous_obj_name = None
         self.contact_point_index = None
         self.points_inside_obj = None
-        self.no_samples = rospy.get_param('no_of_samples')
         self.increment = rospy.get_param('increment_value')
         self.max_translational_limit = rospy.get_param('translational_limit')
-        self.sampling_delta = None
-        self.robot_transform = np.genfromtxt(self.path+'/transformation_matrices/essential_transform/Wam_transform.csv',delimiter = ',')
-        self.table_transform = np.genfromtxt(self.path+'/transformation_matrices/essential_transform/Table_transform.csv',delimiter = ',')
+        self.robot_transform = np.genfromtxt(self.path+'/essential_files/essential_transform/Wam_transform.csv',delimiter = ',')
+        self.table_transform = np.genfromtxt(self.path+'/essential_files/essential_transform/Table_transform.csv',delimiter = ',')
+        self.sphere_points = np.genfromtxt(self.path+'/essential_files/sphere_points.csv',delimiter = ',')
         self.robot.SetTransform(self.robot_transform)
         self.Table.SetTransform(self.table_transform)
         self.contact_matrix = []
@@ -57,12 +55,13 @@ class valid_grasps():
         self.finger_3_med = self.links[20]
         self.finger_3_dist = self.links[21]
         self.palm_link = self.links[9]
+        self.palm_surface_link = self.links[11]
+        self.palm_surface_tranform = self.palm_surface_link.GetTransform()
+        self.palm_surface_point = self.palm_surface_tranform[0:3,3]
+        self.points = []
         self.count_inside_points = None
-        #self.plot_points = None
         self.part_cdmodel = None
-
-
-
+        self.plot_points = None #self.env.plot3(self.sphere_points, 2)
 
     def get_obj_name(self):
         Fid = open(self.path+"/models/stl_files/part_list.csv")
@@ -77,26 +76,34 @@ class valid_grasps():
     def update_environment(self):
         try:
             self.part_cdmodel =  databases.convexdecomposition.ConvexDecompositionModel(self.part)
+            self.palm_surface_tranform = self.palm_surface_link.GetTransform()
+            self.palm_surface_point = self.palm_surface_tranform[0:3,3]
+            self.points = self.sphere_points + self.palm_surface_point
+            self.plot_points = self.env.plot3(self.points,2)
             if not self.part_cdmodel.load():
                 self.part_cdmodel.autogenerate()            
             start = timeit.default_timer()
             rospy.loginfo("Got grasp_extremes")
-            #self.list_of_transformations = self.get_transformation_matrices()
             current_transform = self.part.GetTransform()
-            self.points_inside_obj = self.get_points()
+            tested_points_obj= self.part_cdmodel.testPointsInside(self.points) 
+            self.points_inside_obj = self.points[np.flatnonzero(tested_points_obj),:]
             end = timeit.default_timer()
             print "time taken for getting points", end-start
             recommended_transform = current_transform
             #self.plot_points = self.env.plot3(self.points_inside_obj,2)
-            robot_cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
-            if not robot_cdmodel.load():
-                robot_cdmodel.autogenerate()
-            previous_points = robot_cdmodel.testPointsInside(self.points_inside_obj)
+            self.plot_points.SetShow(0)
+            self.robot_cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
+            if not self.robot_cdmodel.load():
+                self.robot_cdmodel.autogenerate()
+            tested_previous_points = self.robot_cdmodel.testPointsInside(self.points_inside_obj)
+            previous_points = self.points_inside_obj[np.flatnonzero(tested_previous_points),:]
             previous_counts = len(previous_points)
             print self.part.GetTransform()
             for i in range(-1*self.max_translational_limit, self.max_translational_limit, self.increment):#(0,50000,100)
                 for j in range(-1*self.max_translational_limit, self.max_translational_limit, self.increment):
                     for k in range(-1*self.max_translational_limit,self.max_translational_limit, self.increment):
+                        end = timeit.default_timer()
+                        print "time taken for above operation", (end-start)
                         previous_transform = recommended_transform
                         new_transform = previous_transform
                         new_transform[3,0] = previous_transform[3,0] + i/1000.00
@@ -104,20 +111,25 @@ class valid_grasps():
                         new_transform[3,2] = previous_transform[3,2] + k/1000.00
                         print new_transform
                         self.part.SetTransform(new_transform)
-                        #self.plot_points.SetTransform(new_transform)
-                        new_points = robot_cdmodel.testPointsInside(self.points_inside_obj)
+                        tested_point_obj = self.part_cdmodel.testPointsInside(self.points)
+                        self.points_inside_obj = self.points[np.flatnonzero(tested_points_obj),:]
+                        tested_new_points = self.robot_cdmodel.testPointsInside(self.points_inside_obj)
+                        new_points = self.points_inside_obj[np.flatnonzero(tested_new_points),:]
                         new_counts = len(new_points)
                         if new_counts<previous_counts:
                             recommended_transform = new_transform
-                       
+                        
+
+                        self.part.SetTransform(recommended_transform)
                         current_joint_value = self.contact_matrix[self.contact_point_index]
                    
                         finger_1_prox_vs_part = self.env.CheckCollision(self.part,self.finger_1_prox,report=self.report)
                         dist_finger_1_prox_vs_part = self.report.minDistance
-
+                        print "finger 1 prox", finger_1_prox_vs_part
                         if (finger_1_prox_vs_part == True and current_joint_value[11] == '1') or (finger_1_prox_vs_part == False and current_joint_value[11] == '0'):
                             pass
                         else:
+                            print "breaked due to finger 1 proximal link"
                             recommended_transform = previous_transform
                             break
 
@@ -128,6 +140,7 @@ class valid_grasps():
                             pass
                         else:
                             recommended_transform = previous_transform
+                            print "breaked due to finger 1 medial link"
                             break
 
                         finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
@@ -137,6 +150,7 @@ class valid_grasps():
                             pass
                         else:
                             recommended_transform = previous_transform
+                            print "breaked due to finger 1 distal link"
                             break
 
                         finger_2_prox_vs_part = self.env.CheckCollision(self.part,self.finger_2_prox,report=self.report)                 
@@ -146,16 +160,17 @@ class valid_grasps():
                             pass
                         else:
                             recommended_transform = previous_transform
+                            print "breaked due to finger 2 proximal link"
                             break
 
                         finger_2_med_vs_part = self.env.CheckCollision(self.part,self.finger_2_med,report = self.report)
                         dist_finger_2_med_vs_part = self.report.minDistance
-
-
+                        
                         if (finger_2_med_vs_part == True and current_joint_value[9] == '1') or (finger_2_med_vs_part == False and current_joint_value[9] == '0'):
                             pass
                         else:
                             recommended_transform = previous_transform
+                            print "breaked due to finger 2 medial link"
                             break
 
                         finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
@@ -165,6 +180,7 @@ class valid_grasps():
                              pass   
                         else:
                              recommended_transform = previous_transform
+                             print "breaked due to finger 2 distal link"
                              break
                         
                         finger_3_med_vs_part = self.env.CheckCollision(self.part,self.finger_3_med,report = self.report)
@@ -174,6 +190,8 @@ class valid_grasps():
                              pass   
                         else:
                             recommended_transform = previous_transform
+                            print "breaked due to finger 3 medial link"
+
                             break
 
                         finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
@@ -183,6 +201,7 @@ class valid_grasps():
                              pass   
                         else:
                             recommended_transform = previous_transform
+                            print "breaked due to finger 3 distal link"
                             break                                                                                                                                                                  
                         palm_vs_part = self.env.CheckCollision(self.part,self.palm_link,report = self.report)
                         dist_palm_vs_part = self.report.minDistance
@@ -191,10 +210,10 @@ class valid_grasps():
                             pass
                         else:
                             recommended_transform = previous_transform
+                            print 'breaked due to palm'
                             break
                         
                         self.part.SetTransform(recommended_transform)
-                        #self.plot_points.SetTransform(recommended_transform)
             end = timeit.default_timer()
             print "Done !! time taken: ", (end-start)
         except rospy.ROSInterruptException, e:
@@ -240,19 +259,6 @@ class valid_grasps():
             self.env.Add(self.part)
         self.part.SetTransform(self.obj_transform)
 
-    def get_points(self):
-        ab = self.part.ComputeAABB()
-        boxmin = ab.pos() - ab.extents()
-        boxmax = ab.pos()+ ab.extents()
-        self.sampling_delta = np.linalg.norm(ab.extents())/self.no_samples
-        X,Y,Z = numpy.mgrid[boxmin[0]:boxmax[0]:self.sampling_delta,boxmin[1]:boxmax[1]:self.sampling_delta,boxmin[2]:boxmax[2]:self.sampling_delta]
-        points = np.c_[X.flat,Y.flat,Z.flat]
-        tested_points = self.part_cdmodel.testPointsInside(points)
-        inside_points = points[np.flatnonzero(tested_points),:]
-        return inside_points
-        
-        
-        
 
 if __name__=="__main__":
     generate_grasp = valid_grasps()
@@ -262,4 +268,4 @@ if __name__=="__main__":
     generate_grasp.sub_part = rospy.Subscriber("grasp_extremes",GraspSnapshot,generate_grasp.part_updator)
     rospy.wait_for_message("grasp_extremes",GraspSnapshot)
     generate_grasp.update_environment()
-    rospy.spin()
+    rospy.spin()   
