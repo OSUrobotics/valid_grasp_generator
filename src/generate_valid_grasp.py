@@ -9,7 +9,10 @@ from grasp_manager.msg import GraspSnapshot
 from shared_global import *
 from get_matrix import *
 import numpy as np
+from scipy.interpolate import interp1d
 import timeit
+import time
+import os
 
 class valid_grasps():
     def __init__(self):
@@ -23,6 +26,7 @@ class valid_grasps():
         self.is_valid_entry = False
         self.obj_name = ''
         self.part = None
+        self.data_saving_folder = "/home/"+user+"/grasping_data/" 
         self.obj_num = None
         self.sub_num = None
         self.grasp_num = None
@@ -63,6 +67,14 @@ class valid_grasps():
         self.part_cdmodel = None
         self.plot_points = self.env.plot3([1,2,3], 2)
         self.satisfactory_finger_position = False
+        self.plot_points_handler = self.env.plot3(np.array([1,1,1]),2)
+        self.COG_part = np.array([])
+        self.hand_joint_angles = np.array([])
+        self.robot_dof_limits = list(self.robot.GetDOFLimits())
+        self.mapper = interp1d([0,self.robot_dof_limits[1][10]+self.robot_dof_limits[1][11]],[0,self.robot_dof_limits[1][10]])
+        self.hand_quaternion = np.array([0,0,0,0])
+        self.hand_postion = np.array([0,0,0])
+        self.file_name = ''
 
     def get_obj_name(self):
         Fid = open(self.path+"/models/stl_files/part_list.csv")
@@ -76,6 +88,33 @@ class valid_grasps():
 
     def update_environment(self):
         try:
+            self.plot_points_handler.Close()
+            part_link = self.part.GetLinks()[0]
+            part_points = part_link.GetCollisionData().vertices
+            part_link_pose = poseFromMatrix(self.part.GetTransform())
+            new_part_points = poseTransformPoints(part_link_pose, part_points)
+            self.plot_points_handler = self.env.plot3(new_part_points,3)
+            self.COG_part = np.mean(new_part_points,axis =0)
+            active_dof = self.robot.GetDOFValues()
+            hand_dof = active_dof[9:18]
+            finger_1_dof_value = self.mapper(hand_dof[1]+hand_dof[2])
+            finger_2_dof_value = self.mapper(hand_dof[4]+hand_dof[5])
+            finger_3_dof_value = self.mapper(hand_dof[6]+hand_dof[7])
+            finger_spread = hand_dof[0]
+            output_dof_vals = np.array([finger_1_dof_value,finger_2_dof_value,finger_3_dof_value,finger_spread])
+            current_hand_transform = self.robot.GetLinkTransformations()[9]
+            self.hand_position = current_hand_transform[0:3,3]
+            self.hand_quaternion[0]= (current_hand_transform[0,0] + current_hand_transform[1,1] + current_hand_transform[2,2] +1.0)/4.0
+            self.hand_quaternion[1] = (current_hand_transform[0,0] -current_hand_transform[1,1] -current_hand_transform[2,2] +1.0)/4.0
+            self.hand_quaternion[2] = (-1*current_hand_transform[0,0] + current_hand_transform[1,1] - current_hand_transform[2,2] +1.0)/4.0
+            self.hand_quaternion[3] = (-1*current_hand_transform[0,0] - current_hand_transform[1,1] + current_hand_transform[2,2] +1.0)/4.0
+
+            
+
+
+            
+             
+
             #self.part_cdmodel =  databases.convexdecomposition.ConvexDecompositionModel(self.part)
             #self.palm_surface_tranform = self.palm_surface_link.GetTransform()
             #self.palm_surface_point = self.palm_surface_tranform[0:3,3]
@@ -144,11 +183,12 @@ class valid_grasps():
             
             contact_points = self.report.contacts
             contact_points_list = np.array([[0,0,0]])
-            for contact in contact_points:
-                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            if finger_1_prox_vs_part:
+                for contact in contact_points:
+                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-            self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
 
             
             #print "finger 1 prox", finger_1_prox_vs_part
@@ -165,11 +205,12 @@ class valid_grasps():
             
             contact_points = self.report.contacts
             contact_points_list = np.array([[0,0,0]])
-            for contact in contact_points:
-                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            if finger_1_med_vs_part:
+                for contact in contact_points:
+                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-            self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
             #if (finger_1_med_vs_part == True and current_joint_value[8] == '1') or (finger_1_med_vs_part == False and current_joint_value[8] == '0'):
             #    pass
             #else:
@@ -183,11 +224,12 @@ class valid_grasps():
             
             contact_points = self.report.contacts
             contact_points_list = np.array([[0,0,0]])
-            for contact in contact_points:
-                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            if finger_1_dist_vs_part:
+                for contact in contact_points:
+                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-            self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
             #if (finger_1_dist_vs_part == True and current_joint_value[5] == '1') or (finger_1_dist_vs_part == False and current_joint_value[5] == '0'):
             #    pass
             #else:
@@ -201,11 +243,12 @@ class valid_grasps():
             
             contact_points = self.report.contacts
             contact_points_list = np.array([[0,0,0]])
-            for contact in contact_points:
-                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            if finger_2_prox_vs_part:
+                for contact in contact_points:
+                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-            self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
             #if (finger_2_prox_vs_part == True and current_joint_value[12] == '1') or (finger_2_prox_vs_part == False and current_joint_value[12] == '0'):
             #    pass
             #else:
@@ -219,11 +262,12 @@ class valid_grasps():
             
             contact_points = self.report.contacts
             contact_points_list = np.array([[0,0,0]])
-            for contact in contact_points:
-                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            if finger_2_med_vs_part:
+                for contact in contact_points:
+                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-            self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
             #if (finger_2_med_vs_part == True and current_joint_value[9] == '1') or (finger_2_med_vs_part == False and current_joint_value[9] == '0'):
             #    pass
             #else:
@@ -237,11 +281,12 @@ class valid_grasps():
             
             contact_points = self.report.contacts
             contact_points_list = np.array([[0,0,0]])
-            for contact in contact_points:
-                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            if finger_2_dist_vs_part:
+                for contact in contact_points:
+                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-            self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
             #if (finger_2_dist_vs_part == True and current_joint_value[6] == '1') or (finger_2_dist_vs_part == False and current_joint_value[6] == '0'):                       
             #     pass   
             #else:
@@ -255,11 +300,12 @@ class valid_grasps():
             
             contact_points = self.report.contacts
             contact_points_list = np.array([[0,0,0]])
-            for contact in contact_points:
-                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            if finger_3_med_vs_part:
+                for contact in contact_points:
+                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-            self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
             #if (finger_3_med_vs_part == True and current_joint_value[10] == '1') or (finger_3_med_vs_part == False and current_joint_value[10] == '0'):                       
             #     pass   
             #else:
@@ -274,11 +320,12 @@ class valid_grasps():
             
             contact_points = self.report.contacts
             contact_points_list = np.array([[0,0,0]])
-            for contact in contact_points:
-                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            if finger_3_dist_vs_part:
+                for contact in contact_points:
+                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-            self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
             #if (finger_3_dist_vs_part == True and current_joint_value[7] == '1') or (finger_3_dist_vs_part == False and current_joint_value[7] == '0'):                       
             #     pass   
             #else:
@@ -291,11 +338,12 @@ class valid_grasps():
             
             contact_points = self.report.contacts
             contact_points_list = np.array([[0,0,0]])
-            for contact in contact_points:
-                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            if palm_vs_part:
+                for contact in contact_points:
+                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-            self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
             #if (palm_vs_part == True and current_joint_value[14] == '1')  or (palm_vs_part == False and current_joint_value[14] == '0'):
             #    pass
             #else:
@@ -318,8 +366,26 @@ class valid_grasps():
             #print "output transformation matrix ",recommended_transform
             self.points = np.delete(self.points,0,axis=0)
             self.plot_points = self.env.plot3(self.points,4)
-            print self.points
+            print "contact points",self.points
+           
+
+            # Save everything to file
+            if not os.path.exists(self.data_saving_folder):
+                os.makedirs(self.data_saving_folder)
+            objno_subno = self.data_saving_folder+'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)
+            if not os.path.exists(objno_subno):
+                os.makedirs(objno_subno)
+
+            np.savetxt(objno_subno+'/'+self.file_name+'_COG.txt',self.COG_part,delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_hand_position.txt',self.hand_position,delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_hand_quaternion.txt',self.hand_quaternion,delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_closeddofvals.txt',output_dof_vals,delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_contactpoints.txt',self.points,delimiter=',')
+            
+            
             self.robot.SetVisible(0)
+            time.sleep(1)
+            self.robot.SetVisible(1)
         except rospy.ROSInterruptException, e:
             print 'exiting', e
             sys.exit()
@@ -342,12 +408,12 @@ class valid_grasps():
         if self.is_optimal:
             self.ext_opt_num = get_data.optimal_num
             grasp_type = 'optimal'
-            file_name = obj_transform_dir+obj_folder+'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_grasp'+str(self.grasp_num)+'_optimal'+str(self.ext_opt_num)+'_object_transform.txt'
+            self.file_name = 'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_grasp'+str(self.grasp_num)+'_optimal'+str(self.ext_opt_num)
         else:
             grasp_type = 'extreme'
             self.ext_opt_num = get_data.extreme_num
-            file_name = obj_transform_dir+obj_folder+'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_grasp'+str(self.grasp_num)+'_extreme'+str(self.ext_opt_num)+'_object_transform.txt'
-        matrix = get_matrix(file_name)
+            self.file_name = 'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_grasp'+str(self.grasp_num)+'_extreme'+str(self.ext_opt_num)
+        matrix = get_matrix(obj_transform_dir+obj_folder+self.file_name + '_object_transform.txt')
         grasp_all_contact_file = obj_transform_dir+obj_folder+'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)+'_all_grasps_contact_points.csv'
         contact_matrix = get_contact_values(grasp_all_contact_file)
         self.contact_matrix = np.array(contact_matrix)
