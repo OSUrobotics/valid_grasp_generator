@@ -9,6 +9,7 @@ from grasp_manager.msg import GraspSnapshot
 from shared_global import *
 from get_matrix import *
 import numpy as np
+from angle_format_changer import *
 from scipy.interpolate import interp1d
 import timeit
 import time
@@ -104,12 +105,13 @@ class valid_grasps():
             output_dof_vals = np.array([finger_1_dof_value,finger_2_dof_value,finger_3_dof_value,finger_spread])
             current_hand_transform = self.robot.GetLinkTransformations()[9]
             self.hand_position = current_hand_transform[0:3,3]
-            self.hand_quaternion[0]= (current_hand_transform[0,0] + current_hand_transform[1,1] + current_hand_transform[2,2] +1.0)/4.0
-            self.hand_quaternion[1] = (current_hand_transform[0,0] -current_hand_transform[1,1] -current_hand_transform[2,2] +1.0)/4.0
-            self.hand_quaternion[2] = (-1*current_hand_transform[0,0] + current_hand_transform[1,1] - current_hand_transform[2,2] +1.0)/4.0
-            self.hand_quaternion[3] = (-1*current_hand_transform[0,0] - current_hand_transform[1,1] + current_hand_transform[2,2] +1.0)/4.0
 
-            
+            euler_angles = mat2euler(current_hand_transform[0:3,0:3])
+            #self.hand_quaternion[0]= (current_hand_transform[0,0] + current_hand_transform[1,1] + current_hand_transform[2,2] +1.0)/4.0
+            #self.hand_quaternion[1] = (current_hand_transform[0,0] -current_hand_transform[1,1] -current_hand_transform[2,2] +1.0)/4.0
+            #self.hand_quaternion[2] = (-1*current_hand_transform[0,0] + current_hand_transform[1,1] - current_hand_transform[2,2] +1.0)/4.0
+            #self.hand_quaternion[3] = (-1*current_hand_transform[0,0] - current_hand_transform[1,1] + current_hand_transform[2,2] +1.0)/4.0
+            self.hand_quaternion = euler2quat(euler_angles[0],euler_angles[1],euler_angles[2])
 
 
             
@@ -366,7 +368,7 @@ class valid_grasps():
             #print "output transformation matrix ",recommended_transform
             self.points = np.delete(self.points,0,axis=0)
             self.plot_points = self.env.plot3(self.points,4)
-            print "contact points",self.points
+            print "contact points\n",self.points
            
 
             # Save everything to file
