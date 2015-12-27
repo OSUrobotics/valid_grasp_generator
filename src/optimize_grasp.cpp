@@ -20,13 +20,13 @@
 #include "openrave-core.h"
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-#include "generate_valid_grasp/GraspSnapshot.h"
+#include "valid_grasp_generator/GraspSnapshot.h"
 
 
 using namespace OpenRAVE;
 using namespace std;
 
-void import_data(const generate_valid_grasp::GraspSnapshot::ConstPtr& grasp){
+void import_data(const valid_grasp_generator::GraspSnapshot::ConstPtr& grasp){
     ROS_INFO("Got Grasp Extremes");
 }
 
