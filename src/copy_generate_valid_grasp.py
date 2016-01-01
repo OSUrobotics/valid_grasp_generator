@@ -78,6 +78,7 @@ class valid_grasps():
         self.hand_quaternion = np.array([0,0,0,0])
         self.hand_postion = np.array([0,0,0])
         self.file_name = ''
+#        self.penetration_vec = libdepth_penetration.get_penetration(hex(id(self.env)))
 
     def get_obj_name(self):
         Fid = open(self.path+"/models/stl_files/part_list.csv")
@@ -109,10 +110,78 @@ class valid_grasps():
             self.hand_position = current_hand_transform[0:3,3]
 
             euler_angles = mat2euler(current_hand_transform[0:3,0:3])
+            #self.hand_quaternion[0]= (current_hand_transform[0,0] + current_hand_transform[1,1] + current_hand_transform[2,2] +1.0)/4.0
+            #self.hand_quaternion[1] = (current_hand_transform[0,0] -current_hand_transform[1,1] -current_hand_transform[2,2] +1.0)/4.0
+            #self.hand_quaternion[2] = (-1*current_hand_transform[0,0] + current_hand_transform[1,1] - current_hand_transform[2,2] +1.0)/4.0
+            #self.hand_quaternion[3] = (-1*current_hand_transform[0,0] - current_hand_transform[1,1] + current_hand_transform[2,2] +1.0)/4.0
             self.hand_quaternion = euler2quat(euler_angles[0],euler_angles[1],euler_angles[2])
+
+
+            
+             
+
+            #self.part_cdmodel =  databases.convexdecomposition.ConvexDecompositionModel(self.part)
+            #self.palm_surface_tranform = self.palm_surface_link.GetTransform()
+            #self.palm_surface_point = self.palm_surface_tranform[0:3,3]
+            #self.points = self.sphere_points + self.palm_surface_point
+            #self.plot_points = self.env.plot3(self.points,2)
+            #if not self.part_cdmodel.load():
+            #    self.part_cdmodel.autogenerate()            
+            #start = timeit.default_timer()
             self.points = np.array([[0,0,0]])
             rospy.loginfo("Got grasp_extremes")
+            #end = timeit.default_timer()
+            #print "time taken for getting points", end-start
+            #recommended_transform = self.part.GetTransform()
+            #initial_transform = np.dot(recommended_transform,np.eye(4))
+            ##self.plot_points = self.env.plot3(self.points_inside_obj,2)
+            ##self.plot_points.SetShow(0)
+            #self.robot_cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
+            #if not self.robot_cdmodel.load():
+            #    self.robot_cdmodel.autogenerate()
             self.plot_points.Close()
+            #self.points = np.array([])
+            #collision_test = self.env.CheckCollision(self.part, self.robot, report = self.report)
+            ##print "minimum distance between robot and part", self.report.minDistance
+            #for contact in self.report.contacts:
+            #    #print "contacts between robot and part", contact.pos
+            #    self.points = np.append(self.points,np.array(contact.pos))
+            #    #print "minimum distance between robot and part", contact.depth
+
+            #self.plot_points = self.env.plot3(self.points, 2)
+            #print "Previous transform ",previous_transform
+            
+            #tested_points_obj= self.part_cdmodel.testPointsInside(self.points) 
+            #self.points_inside_obj = self.points[np.flatnonzero(tested_points_obj),:]
+            #tested_previous_points = self.robot_cdmodel.testPointsInside(self.points_inside_obj)
+            #previous_points = self.points_inside_obj[np.flatnonzero(tested_previous_points),:]
+            #previous_counts = len(previous_points)
+            
+            #new_transform =np.add(initial_transform,np.zeros((4,4))) 
+            #print "i "+str(i)+" j "+str(j)+" k "+str(k)
+            #new_transform[0,3] = new_transform[0,3] + i/1000.00
+            #new_transform[1,3] = new_transform[1,3] + j/1000.00
+            #new_transform[2,3] = new_transform[2,3] + k/1000.00
+            #self.part.SetTransform(new_transform)
+            #print new_transform
+
+
+            
+            #tested_point_obj = self.part_cdmodel.testPointsInside(self.points)
+            #self.points_inside_obj = self.points[np.flatnonzero(tested_points_obj),:]
+            #tested_new_points = self.robot_cdmodel.testPointsInside(self.points_inside_obj)
+            #new_points = self.points_inside_obj[np.flatnonzero(tested_new_points),:]
+            #new_counts = len(new_points)
+            
+            
+            #if new_counts<=previous_counts:
+            #    recommended_transform = new_transform
+            
+            #print "previous_transform after new_transform",previous_transform
+
+
+            #self.part.SetTransform(recommended_transform)
+            #current_joint_value = self.contact_matrix[self.contact_point_index]
             
             finger_1_prox_vs_part = self.env.CheckCollision(self.part,self.finger_1_prox,report = self.report)
             dist_finger_1_prox_vs_part = self.report.minDistance
@@ -127,6 +196,14 @@ class valid_grasps():
                 self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
 
             
+            #print "finger 1 prox", finger_1_prox_vs_part
+            #if (finger_1_prox_vs_part == True and current_joint_value[11] == '1') or (finger_1_prox_vs_part == False and current_joint_value[11] == '0'):
+            #    pass
+            #else:
+            #    print "continued due to finger 1 proximal link"
+            #    recommended_transform = previous_transform
+            #    continue
+
             finger_1_med_vs_part = self.env.CheckCollision(self.part,self.finger_1_med,report = self.report)
             dist_finger_1_med_vs_part = self.report.minDistance
             print "finger 1 med", finger_1_med_vs_part
@@ -139,6 +216,12 @@ class valid_grasps():
 
                 contact_points_list = np.delete(contact_points_list, 0,axis=0)
                 self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+            #if (finger_1_med_vs_part == True and current_joint_value[8] == '1') or (finger_1_med_vs_part == False and current_joint_value[8] == '0'):
+            #    pass
+            #else:
+            #    recommended_transform = previous_transform
+            #    print "continued due to finger 1 medial link"
+            #    continue
 
             finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
             dist_finger_1_dist_vs_part = self.report.minDistance
@@ -152,6 +235,12 @@ class valid_grasps():
 
                 contact_points_list = np.delete(contact_points_list, 0,axis=0)
                 self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+            #if (finger_1_dist_vs_part == True and current_joint_value[5] == '1') or (finger_1_dist_vs_part == False and current_joint_value[5] == '0'):
+            #    pass
+            #else:
+            #    recommended_transform = previous_transform
+            #    print "continued due to finger 1 distal link"
+            #    continue
 
             finger_2_prox_vs_part = self.env.CheckCollision(self.part,self.finger_2_prox,report=self.report)                 
             dist_finger_2_prox_vs_part = self.report.minDistance
@@ -165,6 +254,12 @@ class valid_grasps():
 
                 contact_points_list = np.delete(contact_points_list, 0,axis=0)
                 self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+            #if (finger_2_prox_vs_part == True and current_joint_value[12] == '1') or (finger_2_prox_vs_part == False and current_joint_value[12] == '0'):
+            #    pass
+            #else:
+            #    recommended_transform = previous_transform
+            #    print "continued due to finger 2 proximal link"
+            #    continue
 
             finger_2_med_vs_part = self.env.CheckCollision(self.part,self.finger_2_med,report = self.report)
             dist_finger_2_med_vs_part = self.report.minDistance
@@ -178,6 +273,12 @@ class valid_grasps():
 
                 contact_points_list = np.delete(contact_points_list, 0,axis=0)
                 self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+            #if (finger_2_med_vs_part == True and current_joint_value[9] == '1') or (finger_2_med_vs_part == False and current_joint_value[9] == '0'):
+            #    pass
+            #else:
+            #    recommended_transform = previous_transform
+            #    print "continued due to finger 2 medial link"
+            #    continue
 
             finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
             dist_finger_1_dist_vs_part = self.report.minDistance
@@ -191,6 +292,12 @@ class valid_grasps():
 
                 contact_points_list = np.delete(contact_points_list, 0,axis=0)
                 self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+            #if (finger_2_dist_vs_part == True and current_joint_value[6] == '1') or (finger_2_dist_vs_part == False and current_joint_value[6] == '0'):                       
+            #     pass   
+            #else:
+            #     recommended_transform = previous_transform
+            #     print "continued due to finger 2 distal link"
+                 #continue
             
             finger_3_med_vs_part = self.env.CheckCollision(self.part,self.finger_3_med,report = self.report)
             dist_finger_3_med_vs_part = self.report.minDistance
@@ -204,6 +311,13 @@ class valid_grasps():
 
                 contact_points_list = np.delete(contact_points_list, 0,axis=0)
                 self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+            #if (finger_3_med_vs_part == True and current_joint_value[10] == '1') or (finger_3_med_vs_part == False and current_joint_value[10] == '0'):                       
+            #     pass   
+            #else:
+            #    recommended_transform = previous_transform
+            #    print "continued due to finger 3 medial link"
+
+            #    continue
 
             finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
             dist_finger_3_dist_vs_part = self.report.minDistance                                                 
@@ -217,7 +331,12 @@ class valid_grasps():
 
                 contact_points_list = np.delete(contact_points_list, 0,axis=0)
                 self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
-            
+            #if (finger_3_dist_vs_part == True and current_joint_value[7] == '1') or (finger_3_dist_vs_part == False and current_joint_value[7] == '0'):                       
+            #     pass   
+            #else:
+            #    recommended_transform = previous_transform
+            #    print "continued due to finger 3 distal link"
+            #    continue                                                                                                                                                                  
             palm_vs_part = self.env.CheckCollision(self.part,self.palm_link,report = self.report)
             dist_palm_vs_part = self.report.minDistance
             print "palm",palm_vs_part
@@ -230,10 +349,26 @@ class valid_grasps():
 
                 contact_points_list = np.delete(contact_points_list, 0,axis=0)
                 self.points = np.append(self.points,[np.mean(contact_points_list,axis=0)],axis=0)
-            
+            #if (palm_vs_part == True and current_joint_value[14] == '1')  or (palm_vs_part == False and current_joint_value[14] == '0'):
+            #    pass
+            #else:
+            #    recommended_transform = previous_transform
+            #    print 'continued due to palm'
+            #    continue
+            #
             # I am using palm contact for finger 3 proximal joint. I did this because finger 3 proximal is the part of palm
             print "finger 3 Proximal",palm_vs_part
-            
+            #if (palm_vs_part == True and current_joint_value[13] == '1') or (palm_vs_part == False and current_joint_value[13] == '0'):
+            #    pass
+            #else:
+            #    recommended_transform = previous_transform
+            #    print 'continued due to finger 3 proximal joint'
+            #            
+            #
+            #self.part.SetTransform(recommended_transform)
+            #end = timeit.default_timer()
+            #print "Done !! time taken: ", (end-start)
+            #print "output transformation matrix ",recommended_transform
             self.points = np.delete(self.points,0,axis=0)
             self.plot_points = self.env.plot3(self.points,4)
             print "contact points\n",self.points

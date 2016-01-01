@@ -24,15 +24,22 @@
 #include <iostream>
 #include <vector>
 #include <boost/python.hpp>
+#include <sstream>
+#include <typeinfo>
 using namespace OpenRAVE;
 using namespace std;
 
-boost::python::list get_penetration_depth(string pointer)
+boost::python::list get_penetration_depth(string env)
 {
-    vector<double> vec(9,9);
-    cout << "Value of the pointer: " << pointer << endl;
-//code for getting penetration value from the openrave
-
+    vector<double> vec(9,0);
+    stringstream ss(env);
+    cout << "initial string value: " << env << endl;
+    long long unsigned int i;
+    ss >> hex >> i;
+    int *penv = reinterpret_cast<int *>(i);
+    cout << "value of penv: " << penv << endl;
+    penv->GetBodies();
+    //code for getting penetration value from the openrave
 
     typename std::vector<double>::iterator iter;
     boost::python::list list;
