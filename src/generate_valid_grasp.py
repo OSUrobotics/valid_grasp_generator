@@ -26,7 +26,6 @@ class valid_grasps():
         self.robot = self.env.GetRobots()[0]
         self.Table = self.env.ReadKinBodyXMLFile('data/table.kinbody.xml')
         self.env.Add(self.Table)
-        self.is_valid_entry = False
         self.obj_name = ''
         self.part = None
         self.data_saving_folder = "/home/"+user+"/grasping_data/" 
@@ -38,12 +37,8 @@ class valid_grasps():
         self.obj_transform = None
         self.previous_obj_name = None
         self.contact_point_index = None
-        #self.points_inside_obj = None
-        self.increment = rospy.get_param('increment_value')
-        self.max_translational_limit = rospy.get_param('translational_limit')
         self.robot_transform = np.genfromtxt(self.path+'/essential_files/essential_transform/Wam_transform.csv',delimiter = ',')
         self.table_transform = np.genfromtxt(self.path+'/essential_files/essential_transform/Table_transform.csv',delimiter = ',')
-        self.sphere_points = np.genfromtxt(self.path+'/essential_files/sphere_points.csv',delimiter = ',')
         self.robot.SetTransform(self.robot_transform)
         self.Table.SetTransform(self.table_transform)
         self.contact_matrix = []
@@ -64,15 +59,9 @@ class valid_grasps():
         self.palm_link = self.links[9]
         self.palm_surface_link = self.links[11]
         self.palm_surface_tranform = self.palm_surface_link.GetTransform()
-        self.palm_surface_point = self.palm_surface_tranform[0:3,3]
-        #self.points = np.array([[0,0,0]])
-        self.count_inside_points = None
-        self.part_cdmodel = None
-        self.plot_points = self.env.plot3([1,2,3], 2)
-        self.satisfactory_finger_position = False
+        #self.plot_points = self.env.plot3([1,2,3], 2)
         self.plot_points_handler = self.env.plot3(np.array([1,1,1]),2)
         self.COG_part = np.array([])
-        self.hand_joint_angles = np.array([])
         self.robot_dof_limits = list(self.robot.GetDOFLimits())
         self.mapper = interp1d([0,self.robot_dof_limits[1][10]+self.robot_dof_limits[1][11]],[0,self.robot_dof_limits[1][10]])
         self.hand_quaternion = np.array([0,0,0,0])
@@ -85,6 +74,14 @@ class valid_grasps():
         self.flag_palm = False
         self.flag_finger_1 = False
         self.flag_finger_2 = False
+        
+        # check flags for finger joint retractions
+        self.flag_finger_1_dist = False
+        self.flag_finger_1_med = False
+        self.flag_finger_2_dist = False
+        self.flag_finger_2_med = False
+        self.flag_finger_3_dist = False
+        self.flag_finger_3_med = False
 
     def get_obj_name(self):
         Fid = open(self.path+"/models/stl_files/part_list.csv")
@@ -140,7 +137,7 @@ class valid_grasps():
                 self.hand_quaternion = euler2quat(euler_angles[0],euler_angles[1],euler_angles[2])
                 #self.points = np.array([[0,0,0]])
                 rospy.loginfo("Got grasp_extremes")
-                self.plot_points.Close()
+                #self.plot_points.Close()
            
 
                 # variables for changing joint angles values
@@ -226,13 +223,6 @@ class valid_grasps():
                     self.flag_finger_2 = True
                 
 
-                # For translation done
-                #print
-                #print "flag_palm: ",self.flag_palm
-                #print "flag_finger_1: ",self.flag_finger_1
-                #print "flag_finger_2: ",self.flag_finger_2
-                #print
-
                 if self.flag_palm and self.flag_finger_1 and self.flag_finger_2:
                     self.translation_done = True
 
@@ -251,7 +241,8 @@ class valid_grasps():
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
                         ##self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
-                    else:
+                        self.flag_finger_1_med = True
+                    elif not self.flag_finger_1_med and finger_1_med_vs_part:
                         finger_1_joint_angles = finger_1_joint_angles -  self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
@@ -266,8 +257,9 @@ class valid_grasps():
                             contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                        self.flag_finger_1_dist = True
                         #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
-                    else:
+                    elif not self.flag_finger_1_dist and finger_1_dist_vs_part:
                         finger_1_joint_angles = finger_1_joint_angles - self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
@@ -283,7 +275,8 @@ class valid_grasps():
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
                         #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
-                    else:
+                        self.flag_finger_2_med = True
+                    elif not self.flag_finger_2_med and finger_2_med_vs_part:
                         finger_2_joint_angles = finger_2_joint_angles - self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
@@ -300,7 +293,8 @@ class valid_grasps():
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
                         #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
-                    else:
+                        self.flag_finger_2_dist = True
+                    elif not self.flag_finger_2_dist and finger_2_dist_vs_part:
                         finger_2_joint_angles = finger_2_joint_angles - self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
@@ -316,7 +310,8 @@ class valid_grasps():
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
                         #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
-                    else:
+                        self.flag_finger_3_med = True
+                    elif not self.flag_finger_3_med and finger_3_med_vs_part:
                         finger_3_joint_angles = finger_3_joint_angles - self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
@@ -332,7 +327,9 @@ class valid_grasps():
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
                         #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
-                    else:
+                        self.flag_finger_3_dist = True
+                    elif not self.flag_finger_3_dist and finger_3_dist_vs_part:
+                        print "executing"
                         finger_3_joint_angles = finger_3_joint_angles - self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
@@ -408,9 +405,18 @@ class valid_grasps():
             self.env.Add(self.part)
         self.part.SetTransform(self.obj_transform)
         self.finger_retracted = False
+        self.translation_done = False
         self.flag_palm = False
         self.flag_finger_1 = False
         self.flag_finger_2 = False
+
+        self.flag_finger_1_dist = False
+        self.flag_finger_1_med = False
+        self.flag_finger_2_dist = False
+        self.flag_finger_2_med = False
+        self.flag_finger_3_dist = False
+        self.flag_finger_3_med = False
+
         self.update_environment()
 
 
@@ -422,5 +428,4 @@ if __name__=="__main__":
     rospy.wait_for_message("grasp_extremes",GraspSnapshot)
     generate_grasp.sub_robot = rospy.Subscriber("grasp_extremes",GraspSnapshot,generate_grasp.robot_updator)
     generate_grasp.sub_part = rospy.Subscriber("grasp_extremes",GraspSnapshot,generate_grasp.part_updator)
-    #generate_grasp.update_environment()
     rospy.spin()   
