@@ -110,9 +110,10 @@ class valid_grasps():
 
     def update_environment(self):
         try:
+            vector = libdepth_penetration.get_penetration(self.part.GetName())
             while not self.finger_retracted:
                 print #add line
-                #enter_to_continue = raw_input("Press Enter to continue: ")
+                enter_to_continue = raw_input("Press Enter to continue: ")
                 print #add line
 
 

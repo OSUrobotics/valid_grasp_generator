@@ -18,6 +18,9 @@
 */
 
 #include "openrave-core.h"
+#include <openrave/openrave.h>
+#include <openrave/utils.h>
+#include <openrave/interface.h>
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "valid_grasp_generator/GraspSnapshot.h"
@@ -29,17 +32,35 @@
 using namespace OpenRAVE;
 using namespace std;
 
-boost::python::list get_penetration_depth(string env)
+boost::python::list get_penetration_depth(string part_name)
 {
     vector<double> vec(9,0);
-    stringstream ss(env);
-    cout << "initial string value: " << env << endl;
-    long long unsigned int i;
-    ss >> hex >> i;
-    int *penv = reinterpret_cast<int *>(i);
+    std::list<EnvironmentBasePtr> envs;
+    RaveGetEnvironments(envs);
+    EnvironmentBasePtr penv = envs.front();
+    vector<RobotBasePtr> robots;
+    cout << "Just before getting part: " << part_name << endl;
+    KinBodyPtr part_kinbody = penv->GetKinBody(part_name);
+    cout << "part_kinbody: " << part_kinbody << endl;
+    KinBody::LinkConstPtr part = part_kinbody->GetLinks()[0];
+    cout << "Just after getting part" << endl;
+    penv->GetRobots(robots);
+    RobotBasePtr Barrett = robots[0];
+    vector<KinBody::LinkPtr> links = Barrett->GetLinks();
+    cout << "part ptr: " << part << endl;
+    cout << "part name: " << part->GetName() << endl;
+    CollisionReportPtr report (new CollisionReport());
+    for (int i=0; i<links.size(); i++){
+        cout << "link " << i << " :" << links[i]->GetName() << endl;
+        bool link_collision = penv->CheckCollision(links[i], part, report) ;
+        for(int j=0; j<report->contacts.size() ; j++){
+            cout << "link " << i << " penetration: " << report->contacts[j].depth << endl;
+        }
+    }
+            
+           // cout << "vector of links" << links << endl;
+    cout << "size of robots: " << robots.size() << endl;
     cout << "value of penv: " << penv << endl;
-    penv->GetBodies();
-    //code for getting penetration value from the openrave
 
     typename std::vector<double>::iterator iter;
     boost::python::list list;

@@ -63,5 +63,5 @@ link_directories(${PYTHON_LIBRARIES})
 ## Specify libraries to link a library or executable target against
 
 add_library(depth_penetration SHARED src/depth_penetration.cpp)
-target_link_libraries(depth_penetration ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
+target_link_libraries(depth_penetration ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${OpenRAVE_LIBRARIES})
 
