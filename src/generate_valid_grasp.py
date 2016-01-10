@@ -15,7 +15,16 @@ import timeit
 import time
 import os
 sys.path.append(catkin_ws_location+"/devel/lib/")
-import libdepth_penetration # This library is generated from depth_penetration.cpp
+#import libdepth_penetration # This library is generated from depth_penetration.cpp
+
+class ContPointWithDistance():
+    def __init__(self,name="Not Specified",MinDist=5,NearestPoint=np.array([0,0,0])):
+        self.MinDistance = MinDist
+        self.ContactPoint = NearestPoint 
+        self.name = name
+
+    def __str__(self):
+        return self.name 
 
 class valid_grasps():
     def __init__(self):
@@ -24,8 +33,8 @@ class valid_grasps():
         self.env.Load(self.path+'/models/robots/barrett_wam.dae')
         self.env.SetViewer('qtcoin')
         self.robot = self.env.GetRobots()[0]
-        self.Table = self.env.ReadKinBodyXMLFile('data/table.kinbody.xml')
-        self.env.Add(self.Table)
+        #self.Table = self.env.ReadKinBodyXMLFile('data/table.kinbody.xml')
+        #self.env.Add(self.Table)
         self.obj_name = ''
         self.part = None
         self.data_saving_folder = "/home/"+user+"/grasping_data/" 
@@ -38,9 +47,9 @@ class valid_grasps():
         self.previous_obj_name = None
         self.contact_point_index = None
         self.robot_transform = np.genfromtxt(self.path+'/essential_files/essential_transform/Wam_transform.csv',delimiter = ',')
-        self.table_transform = np.genfromtxt(self.path+'/essential_files/essential_transform/Table_transform.csv',delimiter = ',')
+        #self.table_transform = np.genfromtxt(self.path+'/essential_files/essential_transform/Table_transform.csv',delimiter = ',')
         self.robot.SetTransform(self.robot_transform)
-        self.Table.SetTransform(self.table_transform)
+        #self.Table.SetTransform(self.table_transform)
         self.contact_matrix = []
         if not self.env.GetCollisionChecker().SetCollisionOptions(CollisionOptions.Distance | CollisionOptions.Contacts):
             collisionChecker = RaveCreateCollisionChecker(self.env,'pqp')
@@ -59,7 +68,7 @@ class valid_grasps():
         self.palm_link = self.links[9]
         self.palm_surface_link = self.links[11]
         self.palm_surface_tranform = self.palm_surface_link.GetTransform()
-        #self.plot_points = self.env.plot3([1,2,3], 2)
+        self.plot_points = self.env.plot3([1,2,3], 2)
         self.plot_points_handler = self.env.plot3(np.array([1,1,1]),2)
         self.COG_part = np.array([])
         self.robot_dof_limits = list(self.robot.GetDOFLimits())
@@ -74,6 +83,22 @@ class valid_grasps():
         self.flag_palm = False
         self.flag_finger_1 = False
         self.flag_finger_2 = False
+        self.robot_all_link_collision_check = np.array([False,False,False,False,False,False,False,False,False],dtype=bool)
+
+        self.palm_contact = ContPointWithDistance("palm contact")
+        self.finger_1_prox_contact = ContPointWithDistance("finger_1_prox")
+        self.finger_1_med_contact = ContPointWithDistance("finger_1_med")
+        self.finger_1_dist_contact = ContPointWithDistance("finger_1_dist")
+        self.finger_2_prox_contact = ContPointWithDistance("finger_2_prox")
+        self.finger_2_med_contact = ContPointWithDistance("finger_2_med")
+        self.finger_2_dist_contact = ContPointWithDistance("finger_2_dist")
+        self.finger_3_med_contact = ContPointWithDistance("finger_3_med")
+        self.finger_3_dist_contact = ContPointWithDistance("finger_3_dist")
+                
+        self.ContactPointWithDistance = [self.palm_contact, self.finger_1_prox_contact, self.finger_1_med_contact, self.finger_1_dist_contact, self.finger_2_prox_contact, self.finger_2_med_contact, self.finger_2_dist_contact, self.finger_3_med_contact,self.finger_3_dist_contact]
+        self.points = np.array([[0,0,0]])
+
+        self.minDistance_of_finger = 0.001
         
         # check flags for finger joint retractions
         self.flag_finger_1_dist = False
@@ -110,13 +135,12 @@ class valid_grasps():
 
     def update_environment(self):
         try:
-            vector = libdepth_penetration.get_penetration(self.part.GetName())
+            #vector = libdepth_penetration.get_penetration(self.part.GetName())
+            self.points = np.array([[0,0,0]])
             while not self.finger_retracted:
+                self.robot.SetVisible(1)
+                #enter_to_continue = raw_input("Press Enter to continue: ")
                 print #add line
-                enter_to_continue = raw_input("Press Enter to continue: ")
-                print #add line
-
-
                 self.plot_points_handler.Close()
                 part_link = self.part.GetLinks()[0]
                 part_points = part_link.GetCollisionData().vertices
@@ -136,9 +160,9 @@ class valid_grasps():
 
                 euler_angles = mat2euler(current_hand_transform[0:3,0:3])
                 self.hand_quaternion = euler2quat(euler_angles[0],euler_angles[1],euler_angles[2])
-                #self.points = np.array([[0,0,0]])
+
                 rospy.loginfo("Got grasp_extremes")
-                #self.plot_points.Close()
+                self.plot_points.Close()
            
 
                 # variables for changing joint angles values
@@ -149,10 +173,10 @@ class valid_grasps():
                 # Translation of the object away from the palm
 
                 palm_vs_part = self.env.CheckCollision(self.part,self.palm_link,report = self.report)
-                dist_palm_vs_part = self.report.minDistance
+                self.palm_contact.MinDistance = self.report.minDistance
+                self.robot_all_link_collision_check[0] = palm_vs_part
                 print "palm",palm_vs_part
                 
-                centroid_of_contact= np.array([])
                 contact_points = self.report.contacts
                 contact_points_list = np.array([[0,0,0]])
                 if palm_vs_part:
@@ -161,27 +185,21 @@ class valid_grasps():
                         contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                     contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                    centroid_of_contact = np.mean(contact_points_list,axis=0)
-                    ##self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                    self.palm_contact.ContactPoint = np.mean(contact_points_list,axis=0)
 
-                    translation_unit_vector = self.get_unit_vector(self.COG_part, centroid_of_contact)
+                    translation_unit_vector = self.get_unit_vector(self.COG_part, self.palm_contact.ContactPoint)
                     part_transform = self.part.GetTransform()
-                #print "Type of part_transform: ",type(part_transform)
-                #if palm_vs_part:
                     part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
                     part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
                     part_transform[2,3] = (part_transform[2,3] + self.translational_threshold*translation_unit_vector[2])
-                    #print "Part Transform: ",part_transform
                     self.part.SetTransform(part_transform)
                 else:
                     self.flag_palm = True
                 finger_1_prox_vs_part = self.env.CheckCollision(self.part,self.finger_1_prox,report = self.report)
-                dist_finger_1_prox_vs_part = self.report.minDistance
-                #print "finger 1 proximal",finger_1_prox_vs_part
-                
+                self.finger_1_prox_contact.MinDistance = self.report.minDistance
+                self.robot_all_link_collision_check[1]=finger_1_prox_vs_part
                 contact_points = self.report.contacts
                 contact_points_list = np.array([[0,0,0]])
-                centroid_of_contact_finger_1_prox = np.array([[0,0,0]])
 
                 if finger_1_prox_vs_part:
                     self.flag_finger_1 = False
@@ -189,12 +207,9 @@ class valid_grasps():
                         contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                     contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                    #print "contact points list finger_1_prox: ",contact_points_list
-                    centroid_of_contact_finger_1_prox = np.mean(contact_points_list,axis = 0)
-                    #
-                    translation_unit_vector = self.get_unit_vector(self.COG_part, centroid_of_contact_finger_1_prox)
+                    self.finger_1_prox_contact.ContactPoint = np.mean(contact_points_list,axis = 0)
+                    translation_unit_vector = self.get_unit_vector(self.COG_part, self.finger_1_prox_contact.ContactPoint)
                     part_transform = self.part.GetTransform()
-                #if finger_1_prox_vs_part:
                     part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
                     part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
                     part_transform[2,3] = (part_transform[2,3] + self.translational_threshold*translation_unit_vector[2])
@@ -202,20 +217,19 @@ class valid_grasps():
                 else:
                     self.flag_finger_1 = True
                 finger_2_prox_vs_part = self.env.CheckCollision(self.part,self.finger_2_prox,report=self.report)                 
-                dist_finger_2_prox_vs_part = self.report.minDistance
-                #print "finger 2 proximal",finger_2_prox_vs_part
-                centroid_of_contact_finger_2_prox = np.array([[0,0,0]])
+                self.finger_2_prox_contact.MinDistance = self.report.minDistance
+                self.robot_all_link_collision_check[2]=finger_2_prox_vs_part
+                contact_points_list = np.array([0,0,0])
                 if finger_2_prox_vs_part:
                     self.flag_finger_2 = False
                     for contact in contact_points:
                         contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                     contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                    centroid_of_contact_finger_2_prox = np.mean(contact_points_list,axis = 0)
-                    #
-                    translation_unit_vector = self.get_unit_vector(self.COG_part, centroid_of_contact_finger_2_prox)
+                    self.finger_2_prox_contact.ContactPoint = np.mean(contact_points_list,axis = 0)
+                    
+                    translation_unit_vector = self.get_unit_vector(self.COG_part, self.finger_2_prox_contact.ContactPoint)
                     part_transform = self.part.GetTransform()
-                #if finger_2_prox_vs_part:
                     part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
                     part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
                     part_transform[2,3] = (part_transform[2,3] + self.translational_threshold*translation_unit_vector[2])
@@ -229,53 +243,55 @@ class valid_grasps():
 
                 # Move the fingers away from the object
                 if self.translation_done:
-                    #enter_to_continue = raw_input("Press enter for continue")
                     finger_1_med_vs_part = self.env.CheckCollision(self.part,self.finger_1_med,report = self.report)
-                    dist_finger_1_med_vs_part = self.report.minDistance
+                    self.finger_1_med_contact.MinDistance = self.report.minDistance
+                    self.robot_all_link_collision_check[3]=finger_1_med_vs_part
                     print "finger 1 med", finger_1_med_vs_part
                     
                     contact_points = self.report.contacts
                     contact_points_list = np.array([[0,0,0]])
-                    if dist_finger_1_med_vs_part < 0.002 and not finger_1_med_vs_part:
+                    if self.finger_1_med_contact.MinDistance < self.minDistance_of_finger and not finger_1_med_vs_part:
                         for contact in contact_points:
                             contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                        ##self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                        self.finger_1_med_contact.ContactPoint = np.mean(contact_points_list, axis=0)
                         self.flag_finger_1_med = True
                     elif not self.flag_finger_1_med and finger_1_med_vs_part:
                         finger_1_joint_angles = finger_1_joint_angles -  self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
                     finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
-                    dist_finger_1_dist_vs_part = self.report.minDistance
+                    self.finger_1_dist_contact.MinDistance = self.report.minDistance
+                    self.robot_all_link_collision_check[4]=finger_1_dist_vs_part
                     print "finger 1 distal",finger_1_dist_vs_part
                     
                     contact_points = self.report.contacts
                     contact_points_list = np.array([[0,0,0]])
-                    if dist_finger_1_dist_vs_part < 0.002 and not finger_1_dist_vs_part:
+                    if self.finger_1_dist_contact.MinDistance < self.minDistance_of_finger and not finger_1_dist_vs_part:
                         for contact in contact_points:
                             contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
+                        self.finger_1_dist_contact.ContactPoint = np.mean(contact_points_list,axis=0)
                         self.flag_finger_1_dist = True
-                        #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
                     elif not self.flag_finger_1_dist and finger_1_dist_vs_part:
                         finger_1_joint_angles = finger_1_joint_angles - self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
                     finger_2_med_vs_part = self.env.CheckCollision(self.part,self.finger_2_med,report = self.report)
-                    dist_finger_2_med_vs_part = self.report.minDistance
+                    self.finger_2_med_contact.MinDistance = self.report.minDistance
+                    self.robot_all_link_collision_check[5]=finger_2_med_vs_part
                     print "finger 2 med",finger_2_med_vs_part
                     
                     contact_points = self.report.contacts
                     contact_points_list = np.array([[0,0,0]])
-                    if dist_finger_2_med_vs_part <0.002 and not finger_2_med_vs_part:
+                    if self.finger_2_med_contact.MinDistance < self.minDistance_of_finger and not finger_2_med_vs_part:
                         for contact in contact_points:
                             contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                        #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                        self.finger_2_med_contact.ContactPoint = np.mean(contact_points_list,axis=0)
                         self.flag_finger_2_med = True
                     elif not self.flag_finger_2_med and finger_2_med_vs_part:
                         finger_2_joint_angles = finger_2_joint_angles - self.joint_retract_threshold
@@ -283,54 +299,56 @@ class valid_grasps():
 
 
                     finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
-                    dist_finger_2_dist_vs_part = self.report.minDistance
+                    self.finger_2_dist_contact.MinDistance = self.report.minDistance
+                    self.robot_all_link_collision_check[6]=finger_2_dist_vs_part
                     print "finger 2 dist",finger_2_dist_vs_part
                     
                     contact_points = self.report.contacts
                     contact_points_list = np.array([[0,0,0]])
-                    if dist_finger_2_dist_vs_part < 0.002 and not finger_2_dist_vs_part:
+                    if self.finger_2_dist_contact.MinDistance < self.minDistance_of_finger and not finger_2_dist_vs_part:
                         for contact in contact_points:
                             contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                        #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                        self.finger_2_dist_contact.ContactPoint = np.mean(contact_points_list,axis=0)
                         self.flag_finger_2_dist = True
                     elif not self.flag_finger_2_dist and finger_2_dist_vs_part:
                         finger_2_joint_angles = finger_2_joint_angles - self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
                     finger_3_med_vs_part = self.env.CheckCollision(self.part,self.finger_3_med,report = self.report)
-                    dist_finger_3_med_vs_part = self.report.minDistance
+                    self.finger_3_med_contact.MinDistance = self.report.minDistance
+                    self.robot_all_link_collision_check[7]=finger_3_med_vs_part
                     print "finger 3 med",finger_3_med_vs_part
                     
                     contact_points = self.report.contacts
                     contact_points_list = np.array([[0,0,0]])
-                    if dist_finger_3_med_vs_part < 0.002 and not finger_3_med_vs_part:
+                    if self.finger_3_med_contact.MinDistance < self.minDistance_of_finger and not finger_3_med_vs_part:
                         for contact in contact_points:
                             contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                        #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                        self.finger_3_med_contact.ContactPoint = np.mean(contact_points_list,axis=0)
                         self.flag_finger_3_med = True
                     elif not self.flag_finger_3_med and finger_3_med_vs_part:
                         finger_3_joint_angles = finger_3_joint_angles - self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
                     finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
-                    dist_finger_3_dist_vs_part = self.report.minDistance                                                 
+                    self.finger_3_dist_contact.MinDistance = self.report.minDistance                                                 
+                    self.robot_all_link_collision_check[8]=finger_3_dist_vs_part
                     print "finger 3 dist",finger_3_dist_vs_part
                     
                     contact_points = self.report.contacts
                     contact_points_list = np.array([[0,0,0]])
-                    if dist_finger_3_dist_vs_part < 0.002 and not finger_3_dist_vs_part:
+                    if self.finger_3_dist_contact.MinDistance < 0.002 and not finger_3_dist_vs_part:
                         for contact in contact_points:
                             contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                        #self.points = np.append(#self.points,[np.mean(contact_points_list,axis=0)],axis=0)
+                        self.finger_3_dist_contact.ContactPoint = np.mean(contact_points_list,axis=0)
                         self.flag_finger_3_dist = True
                     elif not self.flag_finger_3_dist and finger_3_dist_vs_part:
-                        print "executing"
                         finger_3_joint_angles = finger_3_joint_angles - self.joint_retract_threshold
                         self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
@@ -338,30 +356,51 @@ class valid_grasps():
                     # I am using palm contact for finger 3 proximal joint. I did this because finger 3 proximal is the part of palm
                     print "finger 3 Proximal",palm_vs_part
                     
-                    #self.points = np.delete(#self.points,0,axis=0)
-                    #self.plot_points = self.env.plot3(#self.points,4)
-                    #print "contact points\n",#self.points
 
-                    overall_collision_check = self.env.CheckCollision(self.robot,report = self.report)
-                    print "overall robot collision with part: ", overall_collision_check
-                    if not overall_collision_check:
-                        print "executed"
+                    #overall_collision_check = self.env.CheckCollision(self.robot,report = self.report)
+                    print "overall robot collision with part: ",self.robot_all_link_collision_check.any()
+                    if not (self.robot_all_link_collision_check.any()):
+                        print "Fingers Retracted"
                         self.finger_retracted = True
+                    #elif overall_collision_check:
+                    #    if self.report.plink2.GetParent().GetName() == ''
 
            
+            
 
-                # Save everything to file
-                if not os.path.exists(self.data_saving_folder):
-                    os.makedirs(self.data_saving_folder)
-                objno_subno = self.data_saving_folder+'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)
-                if not os.path.exists(objno_subno):
-                    os.makedirs(objno_subno)
+            # Save everything to file
+            if not os.path.exists(self.data_saving_folder):
+                os.makedirs(self.data_saving_folder)
+            objno_subno = self.data_saving_folder+'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)
+            if not os.path.exists(objno_subno):
+                os.makedirs(objno_subno)
 
-                np.savetxt(objno_subno+'/'+self.file_name+'_COG.txt',self.COG_part,delimiter=',')
-                np.savetxt(objno_subno+'/'+self.file_name+'_hand_position.txt',self.hand_position,delimiter=',')
-                np.savetxt(objno_subno+'/'+self.file_name+'_hand_quaternion.txt',self.hand_quaternion,delimiter=',')
-                np.savetxt(objno_subno+'/'+self.file_name+'_closeddofvals.txt',output_dof_vals,delimiter=',')
-                #np.savetxt(objno_subno+'/'+self.file_name+'_contactpoints.txt',#self.points,delimiter=',')
+            print "self.palm_contact : ",self.palm_contact.ContactPoint,",  ", self.palm_contact.MinDistance
+            print "self.finger_1_prox: ",self.finger_1_prox_contact.ContactPoint,",  ",self.finger_1_prox_contact.MinDistance
+            print "self.finger_1_med_: ",self.finger_1_med_contact.ContactPoint ,",  ",self.finger_1_med_contact.MinDistance
+            print "self.finger_1_dist: ",self.finger_1_dist_contact.ContactPoint,",  ",self.finger_1_dist_contact.MinDistance
+            print "self.finger_2_prox: ",self.finger_2_prox_contact.ContactPoint,",  ",self.finger_2_prox_contact.MinDistance
+            print "self.finger_2_med_: ",self.finger_2_med_contact.ContactPoint ,",  ",self.finger_2_med_contact.MinDistance
+            print "self.finger_2_dist: ",self.finger_2_dist_contact.ContactPoint,",  ",self.finger_2_dist_contact.MinDistance
+            print "self.finger_3_med_: ",self.finger_3_med_contact.ContactPoint ,",  ",self.finger_3_med_contact.MinDistance
+            print "self.finger_3_dist: ",self.finger_3_dist_contact.ContactPoint,",  ",self.finger_3_dist_contact.MinDistance
+
+            print "Links that were in contact: "
+            for contact in self.ContactPointWithDistance:
+                if not contact.ContactPoint.all() == 0 and contact.MinDistance < self.minDistance_of_finger * 10:
+                    print str(contact)
+                    self.points = np.append(self.points,[contact.ContactPoint],axis=0)
+            
+            self.points = np.delete(self.points,0,axis=0)
+            print
+            print "Points that are plotted", self.points
+            self.plot_points = self.env.plot3(self.points,6,np.array([0,0,0]))
+            np.savetxt(objno_subno+'/'+self.file_name+'_COG.txt',self.COG_part,delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_hand_position.txt',self.hand_position,delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_hand_quaternion.txt',self.hand_quaternion,delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_closeddofvals.txt',output_dof_vals,delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_contactpoints.txt',self.points)
+            self.robot.SetVisible(0)
             
         except rospy.ROSInterruptException, e:
             print 'exiting', e
