@@ -78,7 +78,7 @@ class valid_grasps():
         self.file_name = ''
         self.translation_done = False
         self.translational_threshold = 0.0005
-        self.joint_retract_threshold = 0.005
+        self.joint_retract_threshold = 0.003
         self.finger_retracted = False
         self.flag_palm = False
         self.flag_finger_1 = False
@@ -400,7 +400,7 @@ class valid_grasps():
             np.savetxt(objno_subno+'/'+self.file_name+'_hand_quaternion.txt',self.hand_quaternion,delimiter=',')
             np.savetxt(objno_subno+'/'+self.file_name+'_closeddofvals.txt',output_dof_vals,delimiter=',')
             np.savetxt(objno_subno+'/'+self.file_name+'_contactpoints.txt',self.points)
-            self.robot.SetVisible(0)
+            self.robot.SetVisible(1)
             
         except rospy.ROSInterruptException, e:
             print 'exiting', e
