@@ -69,7 +69,7 @@ class valid_grasps():
         self.palm_surface_link = self.links[11]
         self.palm_surface_tranform = self.palm_surface_link.GetTransform()
         self.plot_points = self.env.plot3([1,2,3], 2)
-        self.plot_points_handler = self.env.plot3(np.array([1,1,1]),2)
+        #self.plot_points_handler = self.env.plot3(np.array([1,1,1]),2)
         self.COG_part = np.array([])
         self.robot_dof_limits = list(self.robot.GetDOFLimits())
         self.mapper = interp1d([0,self.robot_dof_limits[1][10]+self.robot_dof_limits[1][11]],[0,self.robot_dof_limits[1][10]])
@@ -132,7 +132,15 @@ class valid_grasps():
         robot_all_dof_values[10:18] = [joint_angles[0],dist_mapper(joint_angles[0]),robot_all_dof_values[12],joint_angles[1],dist_mapper(joint_angles[1]),joint_angles[2],dist_mapper(joint_angles[2])]
         self.robot.SetDOFValues(robot_all_dof_values)
 
-
+    def get_centroid(self,contact_list):
+        print "Length of contact_list", len(contact_list)
+        if len(contact_list)>1:
+            print "Length is greater than one"
+            sys.exit(1)
+            while True:
+                print "length is greater"
+        for contact in contact_list:
+            return contact.pos
     def update_environment(self):
         try:
             #vector = libdepth_penetration.get_penetration(self.part.GetName())
@@ -141,12 +149,12 @@ class valid_grasps():
                 self.robot.SetVisible(1)
                 #enter_to_continue = raw_input("Press Enter to continue: ")
                 print #add line
-                self.plot_points_handler.Close()
+                #self.plot_points_handler.Close()
                 part_link = self.part.GetLinks()[0]
                 part_points = part_link.GetCollisionData().vertices
                 part_link_pose = poseFromMatrix(self.part.GetTransform())
                 new_part_points = poseTransformPoints(part_link_pose, part_points)
-                self.plot_points_handler = self.env.plot3(new_part_points,3)
+                #self.plot_points_handler = self.env.plot3(new_part_points,3)
                 self.COG_part = np.mean(new_part_points,axis =0)
                 active_dof = self.robot.GetDOFValues()
                 hand_dof = active_dof[9:18]
@@ -219,7 +227,7 @@ class valid_grasps():
                 finger_2_prox_vs_part = self.env.CheckCollision(self.part,self.finger_2_prox,report=self.report)                 
                 self.finger_2_prox_contact.MinDistance = self.report.minDistance
                 self.robot_all_link_collision_check[2]=finger_2_prox_vs_part
-                contact_points_list = np.array([0,0,0])
+                contact_points_list = np.array([[0,0,0]])
                 if finger_2_prox_vs_part:
                     self.flag_finger_2 = False
                     for contact in contact_points:
@@ -375,6 +383,27 @@ class valid_grasps():
             if not os.path.exists(objno_subno):
                 os.makedirs(objno_subno)
 
+            # I have to do below dumb part because there is some error for recoroding contact point.
+            palm_vs_part = self.env.CheckCollision(self.palm_link,self.part,report = self.report)
+            self.palm_contact.ContactPoint = self.get_centroid(self.report.contacts)
+            finger_1_prox_vs_part = self.env.CheckCollision(self.finger_1_prox,self.part,report=self.report)
+            self.finger_1_prox_contact.ContactPoint = self.get_centroid(self.report.contacts)
+            finger_1_med_vs_part = self.env.CheckCollision(self.finger_1_med,self.part,report=self.report)
+            self.finger_1_med_contact.ContactPoint = self.get_centroid(self.report.contacts)
+            finger_1_dist_vs_part = self.env.CheckCollision(self.finger_1_dist,self.part,report=self.report)
+            self.finger_1_dist_contact.ContactPoint = self.get_centroid(self.report.contacts)
+            finger_2_prox_vs_part = self.env.CheckCollision(self.finger_2_prox,self.part,report=self.report)
+            self.finger_2_prox_contact.ContactPoint = self.get_centroid(self.report.contacts)
+            finger_2_med_vs_part = self.env.CheckCollision(self.finger_2_med,self.part,report=self.report)
+            self.finger_2_med_contact.ContactPoint = self.get_centroid(self.report.contacts)
+            finger_2_dist_vs_part = self.env.CheckCollision(self.finger_2_dist,self.part,report=self.report)
+            self.finger_2_dist_contact.ContactPoint = self.get_centroid(self.report.contacts)
+            finger_3_med_vs_part = self.env.CheckCollision(self.finger_3_med,self.part,report=self.report)
+            self.finger_3_med_contact.ContactPoint = self.get_centroid(self.report.contacts)
+            finger_3_dist_vs_part = self.env.CheckCollision(self.finger_3_dist,self.part,report=self.report)
+            self.finger_3_dist_contact.ContactPoint = self.get_centroid(self.report.contacts)
+            
+            
             print "self.palm_contact : ",self.palm_contact.ContactPoint,",  ", self.palm_contact.MinDistance
             print "self.finger_1_prox: ",self.finger_1_prox_contact.ContactPoint,",  ",self.finger_1_prox_contact.MinDistance
             print "self.finger_1_med_: ",self.finger_1_med_contact.ContactPoint ,",  ",self.finger_1_med_contact.MinDistance
@@ -387,7 +416,7 @@ class valid_grasps():
 
             print "Links that were in contact: "
             for contact in self.ContactPointWithDistance:
-                if not contact.ContactPoint.all() == 0 and contact.MinDistance < self.minDistance_of_finger * 10:
+                if not contact.ContactPoint.all() == 0 and contact.MinDistance < self.minDistance_of_finger:
                     print str(contact)
                     self.points = np.append(self.points,[contact.ContactPoint],axis=0)
             
