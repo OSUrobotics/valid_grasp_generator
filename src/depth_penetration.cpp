@@ -32,9 +32,11 @@
 using namespace OpenRAVE;
 using namespace std;
 
+GraphHandlePtr point_handler;
+
 boost::python::list get_penetration_depth(string part_name)
 {
-    vector<double> vec(9,0);
+    vector<double> vec(0);
     std::list<EnvironmentBasePtr> envs;
     RaveGetEnvironments(envs);
     EnvironmentBasePtr penv = envs.front();
@@ -49,15 +51,24 @@ boost::python::list get_penetration_depth(string part_name)
     vector<KinBody::LinkPtr> links = Barrett->GetLinks();
     cout << "part ptr: " << part << endl;
     cout << "part name: " << part->GetName() << endl;
+    //vector<vector<double>> point_list;
     CollisionReportPtr report (new CollisionReport());
     for (int i=0; i<links.size(); i++){
         cout << "link " << i << " :" << links[i]->GetName() << endl;
         bool link_collision = penv->CheckCollision(links[i], part, report) ;
+        //cout << "contact link depth" << report->contacts[0].depth << endl;
+        //cout << "link " << i << "collision with part is " << link_collision << endl;
         for(int j=0; j<report->contacts.size() ; j++){
             cout << "link " << i << " penetration: " << report->contacts[j].depth << endl;
+            vec.push_back((double) report->contacts[j].pos.x);
+            vec.push_back((double) report->contacts[j].pos.y);
+            vec.push_back((double) report->contacts[j].pos.z);
         }
     }
-            
+    
+    //point_handler = penv->plot3(points.data(),points.size(),12,5);
+    //delete<CollisionReportPtr> report;
+    
            // cout << "vector of links" << links << endl;
     cout << "size of robots: " << robots.size() << endl;
     cout << "value of penv: " << penv << endl;

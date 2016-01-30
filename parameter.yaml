@@ -1,3 +1,5 @@
 no_of_samples: 100
 increment_value: 1
 translational_limit: 5
+Things_done: True
+Ready_for_input: True
