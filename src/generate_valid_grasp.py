@@ -134,33 +134,6 @@ class valid_grasps():
         z = pt1[2] - pt2[2]
         mag = np.sqrt(x**2 + y**2 + z**2)
         return [x/mag,y/mag,z/mag]
-    
-    def get_vector(self,pt1,pt2):
-        x = pt1[0] - pt2[0]
-        y = pt1[1] - pt2[1]
-        z = pt1[2] - pt2[2]
-        return [x,y,z]
-
-    def GetVectorMagnitude(self,vector):
-        print vector
-        mag = np.sqrt((vector[0])**2 + (vector[1])**2 + (vector[2])**2)
-        return mag
-
-    def PointOnPrincipalAxis(self,palm_1st_axis,palm_2nd_axis,palm_center,part_principal_axes,part_center):
-        vector_cross_product = np.array([])
-        for vec in part_principal_axes:
-            cross_product = np.cross(palm_1st_axis,vec)
-            vector_cross_product = np.append(vector_cross_product, self.GetVectorMagnitude(cross_product))
-            cross_product = np.cross(palm_2nd_axis,vec)
-            vector_cross_product = np.append(vector_cross_product, self.GetVectorMagnitude(cross_product))
-
-        vector_cross_product = vector_cross_product.reshape(2,3)
-        r,c = np.where(vector_cross_product == np.min(vector_cross_product))
-        vec_1 = self.get_unit_vector(part_center,palm_center)
-        vec_2 = np.copy(part_principal_axes[c[0]])
-        angle  = np.arccos(np.dot(vec_1,vec_2))
-        return np.add(palm_center,np.dot(vec_1,angle))
-        
         
     def set_hand_joint_angles(self,joint_angles):
         # This function is specific to this class.
@@ -173,7 +146,6 @@ class valid_grasps():
             pass
 
     def get_centroid(self,contact_list):
-#        print "Length of contact_list", len(contact_list)
         if len(contact_list)>1:
             new_array = np.array([[0,0,0]])
             for contact in contact_list:
@@ -184,9 +156,11 @@ class valid_grasps():
         for contact in contact_list:
             return contact.pos
 
+    def get_perpendicular_vector(self,vec1,vec2):
+        return np.cross(vec2,vec1)
+
     def update_environment(self):
         try:
-            #vector = libdepth_penetration.get_penetration(self.part.GetName())
             user_input = raw_input("\n Do you want to retract Finger (y/n): ") or "y"
             self.points = np.array([[0,0,0]])
             self.output_file_id = open('all_grasp_data.csv','a')
@@ -199,22 +173,15 @@ class valid_grasps():
             palm_points = palm_link.GetCollisionData().vertices
             palm_link_pose = poseFromMatrix(palm_link.GetTransform())
             transformed_points = poseTransformPoints(palm_link_pose, palm_points)
-            pt_handler = self.env.plot3(np.array([transformed_points[3687],transformed_points[3875],transformed_points[3605],transformed_points[3782]]), 10,colors = np.array([0,0,0]))
-            palm_1st_principal_unit_vector = self.get_unit_vector(transformed_points[3687],transformed_points[3875])
-            palm_2nd_principal_unit_vector = self.get_unit_vector(transformed_points[3605],transformed_points[3782])
             palm_center = np.mean(np.array([transformed_points[3687],transformed_points[3875],transformed_points[3605],transformed_points[3782]]), axis = 0)
+            palm_perpendicular_vector = self.get_perpendicular_vector(self.get_unit_vector(transformed_points[3687],palm_center),self.get_unit_vector(transformed_points[3605],palm_center))
+            point_along_palm_perpendicular_vector = np.add(palm_center,np.dot(-0.1,palm_perpendicular_vector))
+            #pt_handler = self.env.plot3(np.array([point_along_palm_perpendicular_vector,transformed_points[3687],transformed_points[3875],transformed_points[3605],transformed_points[3782],palm_center]), 10,colors = np.array([0,0,0]))
             start_time = time.time()
             if not (user_input == 'n' or user_input == 'N'):
                 print "Retracting Fingers: "
                 while not self.finger_retracted:
                     rospy.set_param("Ready_for_input",False)
-                    self.robot.SetVisible(1)
-                    part_link = self.part.GetLinks()[0]
-                    part_points = part_link.GetCollisionData().vertices
-                    part_link_pose = poseFromMatrix(self.part.GetTransform())
-                    new_part_points = poseTransformPoints(part_link_pose, part_points)
-                    centroid, part_principal_axes = GetPrincipalAxes(new_part_points)
-                    self.point_on_principal_axis = self.PointOnPrincipalAxis(palm_1st_principal_unit_vector,palm_2nd_principal_unit_vector,palm_center,part_principal_axes,centroid)
                     active_dof = self.robot.GetDOFValues()
                     hand_dof = active_dof[9:18]
                     finger_1_dof_value = self.mapper(hand_dof[1]+hand_dof[2])
@@ -249,7 +216,7 @@ class valid_grasps():
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
                         self.palm_contact.ContactPoint = np.mean(contact_points_list,axis=0)
 
-                        translation_unit_vector = self.get_unit_vector(self.point_on_principal_axis, self.palm_contact.ContactPoint)
+                        translation_unit_vector = self.get_unit_vector(point_along_palm_perpendicular_vector, self.palm_contact.ContactPoint)
                         part_transform = self.part.GetTransform()
                         part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
                         part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
@@ -270,7 +237,7 @@ class valid_grasps():
 
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
                         self.finger_1_prox_contact.ContactPoint = np.mean(contact_points_list,axis = 0)
-                        translation_unit_vector = self.get_unit_vector(self.point_on_principal_axis, self.finger_1_prox_contact.ContactPoint)
+                        translation_unit_vector = self.get_unit_vector(point_along_palm_perpendicular_vector, self.finger_1_prox_contact.ContactPoint)
                         part_transform = self.part.GetTransform()
                         part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
                         part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
@@ -290,7 +257,7 @@ class valid_grasps():
                         contact_points_list = np.delete(contact_points_list, 0,axis=0)
                         self.finger_2_prox_contact.ContactPoint = np.mean(contact_points_list,axis = 0)
                         
-                        translation_unit_vector = self.get_unit_vector(self.point_on_principal_axis, self.finger_2_prox_contact.ContactPoint)
+                        translation_unit_vector = self.get_unit_vector(point_along_palm_perpendicular_vector, self.finger_2_prox_contact.ContactPoint)
                         part_transform = self.part.GetTransform()
                         part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
                         part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
@@ -517,7 +484,6 @@ class valid_grasps():
                 csv_writer.writerow(["obj"+str(self.obj_num),"sub"+str(self.sub_num),"grasp"+str(self.grasp_num),"optimal"+str(self.ext_opt_num), output_dof_vals.tolist(), self.COG_part.tolist(), self.points.tolist(),self.hand_position.tolist(),self.hand_quaternion.tolist()])
             else:
                 csv_writer.writerow(["obj"+str(self.obj_num),"sub"+str(self.sub_num),"grasp"+str(self.grasp_num),"extreme"+str(self.ext_opt_num), output_dof_vals.tolist(), self.COG_part.tolist(), self.points.tolist(),self.hand_position.tolist(),self.hand_quaternion.tolist()])
-            self.robot.SetVisible(1)
             self.output_file_id.close()
             rospy.set_param("Things_done",True)
             
