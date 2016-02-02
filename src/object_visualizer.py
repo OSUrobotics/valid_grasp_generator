@@ -12,12 +12,12 @@ import math
 from openravepy.examples import tutorial_grasptransform
 
 
+from obj_dict import *
 
 class object_visualizer(object):
     def __init__(self):
         self.path = rospkg.RosPack().get_path('valid_grasp_generator')
 	self.stl_path = self.path + "/models/stl_files"
-        self.stl_part_list = np.genfromtxt(self.stl_path + "/part_list.csv",dtype= "|S",delimiter=",")
         self.env = Environment()
 	self.obj_num = 15
         self.env.Load(self.stl_path + '/Chunk_of_foam.STL',{'scalegeometry':'0.001 0.001 0.001'})
@@ -28,19 +28,21 @@ class object_visualizer(object):
         self.flag = False
         self.hand_1_mats = self.hand_1.GetLinkTransformations()
         self.part_mat = np.array(self.obj.GetTransform())
+        self.obj.SetVisible(0)
 	self.obj.SetTransform(np.eye(4))
 	self.gt = tutorial_grasptransform.GraspTransform(self.env, self.hand_1)
 
     def set_obj(self, obj_num):
+    	global grasp_obj_dict
 	self.obj_num = obj_num
     	self.env.Remove(self.obj)
-	self.obj = self.env.ReadKinBodyXMLFile(self.stl_path + "/" + self.stl_part_list[obj_num][2], {'scalegeometry':'0.001 0.001 0.001'})
-        self.env.Add(self.obj)
-	self.obj_y_rotate = self.stl_part_list[obj_num][2]
+	self.env.Load(self.stl_path + "/" + grasp_obj_dict[obj_num][1], {'scalegeometry':'0.001 0.001 0.001'})
+	self.obj = self.env.GetKinBody(grasp_obj_dict[obj_num][1].split('.')[0])
+	self.obj_y_rotate = grasp_obj_dict[obj_num][2]
 	T_cent = self.get_stl_centroid_transform()
 	self.apply_link_transform(T_cent, self.obj)
 	
-	rospy.loginfo("Loaded " + self.stl_part_list[obj_num][0])
+	rospy.loginfo("Loaded " + grasp_obj_dict[obj_num][0])
 
     def set_hand_joints(self,jnt_dict):
     	hand_jnts = self.hand_1.GetJoints()
@@ -96,13 +98,8 @@ class object_visualizer(object):
 	self.apply_link_transform(T_cent, self.hand_1)
 
     def get_stl_centroid_transform(self):
-        part_link = self.obj.GetLinks()[0]
-        part_points = part_link.GetCollisionData().vertices
-        part_link_pose = poseFromMatrix(part_link.GetTransform())
-        transformed_points = poseTransformPoints(part_link_pose, part_points)
-	#centroid = obj_centroid_dict[self.obj_num]
-        centroid = np.multiply(1000,np.mean(transformed_points, axis=0))
-        
+    	global obj_centroid_dict
+	centroid = obj_centroid_dict[self.obj_num]
 	T_cent = np.eye(4)
 	for idx, x in enumerate(centroid):
 		T_cent[idx][3] = x / 1000.0
@@ -157,7 +154,7 @@ class object_visualizer(object):
 
     def standardize_box(self):
     	while True:
-		user_input = raw_input("Name the axes to rotate around: (x)(xy)(...): ") or "n"
+		user_input = raw_input("Name the axes to rotate around: (x)(xy)(...): ")
 		user_input = user_input.strip().lower()
 		standardize_mat = np.eye(4)
 		if "x" in user_input:
