@@ -112,8 +112,7 @@ class valid_grasps():
         self.flag_finger_3_dist = False
         self.flag_finger_3_med = False
 
-        self.output_file_id = None
-        #open('all_grasp_data.csv','a')
+        self.output_file_id = open('all_grasp_data.csv','w')
         #self.output_file_id.close()
 
     def get_obj_name(self):
@@ -478,8 +477,10 @@ class valid_grasps():
             np.savetxt(objno_subno+'/'+self.file_name+'_hand_position.txt',self.hand_position,delimiter=',')
             np.savetxt(objno_subno+'/'+self.file_name+'_hand_quaternion.txt',self.hand_quaternion,delimiter=',')
             np.savetxt(objno_subno+'/'+self.file_name+'_closeddofvals.txt',output_dof_vals,delimiter=',')
-            np.savetxt(objno_subno+'/'+self.file_name+'_contactpoints.txt',self.points)
-            np.savetxt(objno_subno+'/'+self.file_name+'_JointAngles.txt',self.robot.GetDOFValues())
+            np.savetxt(objno_subno+'/'+self.file_name+'_contactpoints.txt',self.points,delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_JointAngles.txt',self.robot.GetDOFValues(),delimiter=',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_HandTransformation.txt',current_hand_transform,delimiter = ',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_ObjTransformation.txt',self.part.GetTransform(),delimiter = ',')
             if self.is_optimal:
                 csv_writer.writerow(["obj"+str(self.obj_num),"sub"+str(self.sub_num),"grasp"+str(self.grasp_num),"optimal"+str(self.ext_opt_num), output_dof_vals.tolist(), self.COG_part.tolist(), self.points.tolist(),self.hand_position.tolist(),self.hand_quaternion.tolist()])
             else:

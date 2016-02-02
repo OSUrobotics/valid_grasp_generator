@@ -11,3 +11,4 @@ user = getpass.getuser()
 obj_transform_dir = '/media/'+user+'/FA648F24648EE2AD/obj_transforms/'
 
 
+grasping_data_folder = '/home/'+user+'/grasping_data/'
