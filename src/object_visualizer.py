@@ -41,8 +41,10 @@ class object_visualizer(object):
 	self.obj_y_rotate = grasp_obj_dict[obj_num][2]
 	T_cent = self.get_stl_centroid_transform()
 	self.apply_link_transform(T_cent, self.obj)
-	
 	rospy.loginfo("Loaded " + grasp_obj_dict[obj_num][0])
+
+    def set_joint_angles(self,joint_angles):
+        self.hand_1.SetDOFValues(joint_angles)
 
     def set_hand_joints(self,jnt_dict):
     	hand_jnts = self.hand_1.GetJoints()

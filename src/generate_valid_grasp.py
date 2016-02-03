@@ -112,6 +112,10 @@ class valid_grasps():
         self.flag_finger_3_dist = False
         self.flag_finger_3_med = False
 
+        self.flag_finger_1_closure = False
+        self.flag_finger_2_closure = False
+        self.flag_finger_3_closure = False
+
         self.output_file_id = open('all_grasp_data.csv','w')
         #self.output_file_id.close()
 
@@ -143,6 +147,15 @@ class valid_grasps():
             self.robot.SetDOFValues(robot_all_dof_values)
         except ValueError:
             pass
+
+    #def set_finger_joint_angles(self,joint_angles):
+    #    try:
+    #        dist_mapper = interp1d([0,self.robot_dof_limits[1][10]],[0,self.robot_dof_limits[1][11]])
+    #        robot_all_dof_values = self.robot.GetDOFValues()
+    #        robot_all_dof_values[10:18] = [robot_all_dof_values[10],dist_mapper(joint_angles[0]),robot_all_dof_values[12],robot_all_dof_values[13],dist_mapper(joint_angles[1]),robot_all_dof_values[14],dist_mapper(joint_angles[2])]
+    #        self.robot.SetDOFValues(robot_all_dof_values)
+    #    except ValueError:
+    #        pass
 
     def get_centroid(self,contact_list):
         if len(contact_list)>1:
@@ -285,6 +298,7 @@ class valid_grasps():
                             contact_points_list = np.delete(contact_points_list, 0,axis=0)
                             self.finger_1_med_contact.ContactPoint = np.mean(contact_points_list, axis=0)
                             self.flag_finger_1_med = True
+                            self.flag_finger_1_closure = True
                         elif not self.flag_finger_1_med and finger_1_med_vs_part:
                             finger_1_joint_angles = finger_1_joint_angles -  self.joint_retract_threshold
                             self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
@@ -321,6 +335,7 @@ class valid_grasps():
                             contact_points_list = np.delete(contact_points_list, 0,axis=0)
                             self.finger_2_med_contact.ContactPoint = np.mean(contact_points_list,axis=0)
                             self.flag_finger_2_med = True
+                            self.flag_finger_2_closure = True
                         elif not self.flag_finger_2_med and finger_2_med_vs_part:
                             finger_2_joint_angles = finger_2_joint_angles - self.joint_retract_threshold
                             self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
@@ -358,6 +373,7 @@ class valid_grasps():
                             contact_points_list = np.delete(contact_points_list, 0,axis=0)
                             self.finger_3_med_contact.ContactPoint = np.mean(contact_points_list,axis=0)
                             self.flag_finger_3_med = True
+                            self.flag_finger_3_closure = True
                         elif not self.flag_finger_3_med and finger_3_med_vs_part:
                             finger_3_joint_angles = finger_3_joint_angles - self.joint_retract_threshold
                             self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
@@ -398,10 +414,47 @@ class valid_grasps():
                             print "timeout"
                             self.finger_retracted = True
                         #elif overall_collision_check:
-                        #    if self.report.plink2.GetParent().GetName() == ''
+                        #    if self.report.plink2.GetParent().GetName()el== ''
 
-           
-            
+                finger_closure = False
+                finger_closure_start = time.time()
+                while not finger_closure:
+                    finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
+                    self.finger_1_dist_contact.MinDistance = self.report.minDistance
+                    #print self.flag_finger_1_closure, self.flag_finger_2_closure, self.flag_finger_3_closure
+                    #print self.robot.GetDOFValues()[11],self.robot.GetDOFValues()[14],self.robot.GetDOFValues()[16]
+                    if self.robot.GetDOFValues()[11] >= 0.82:
+                        self.flag_finger_1_closure = False
+                    if self.robot.GetDOFValues()[14] >= 0.82:
+                        self.flag_finger_2_closure = False
+                    if self.robot.GetDOFValues()[16] >= 0.82:
+                        self.flag_finger_3_closure = False
+                    robot_dof_values = self.robot.GetDOFValues()
+                    if self.finger_1_dist_contact.MinDistance > self.minDistance_of_finger and self.flag_finger_1_closure:
+                        robot_dof_values[11] = robot_dof_values[11] + self.joint_retract_threshold
+                    elif self.finger_1_dist_contact.MinDistance <= self.minDistance_of_finger:
+                        self.flag_finger_1_closure = False
+                    
+                    finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
+                    self.finger_2_dist_contact.MinDistance = self.report.minDistance
+                    if self.finger_2_dist_contact.MinDistance > self.minDistance_of_finger and self.flag_finger_2_closure:
+                        robot_dof_values[14] = robot_dof_values[14] + self.joint_retract_threshold
+                    elif self.finger_2_dist_contact.MinDistance <= self.minDistance_of_finger:
+                        self.flag_finger_2_closure = False
+                        
+                    finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
+                    self.finger_3_dist_contact.MinDistance = self.report.minDistance
+                    if self.finger_3_dist_contact.MinDistance > self.minDistance_of_finger and self.flag_finger_3_closure:
+                        robot_dof_values[16] = robot_dof_values[16] + self.joint_retract_threshold
+                    elif self.finger_3_dist_contact.MinDistance <= self.minDistance_of_finger:
+                        self.flag_finger_3_closure = False
+                    
+                    finger_closure_end = time.time()
+                    self.robot.SetDOFValues(robot_dof_values)
+                    if not self.flag_finger_1_closure and not self.flag_finger_2_closure and not self.flag_finger_3_closure:
+                        print "Executed finger closure"
+                        finger_closure = True
+
 
             # Save everything to file
             if not os.path.exists(self.data_saving_folder):
@@ -464,9 +517,11 @@ class valid_grasps():
             print "self.finger_3_dist: ",self.finger_3_dist_contact.ContactPoint,",  ",self.finger_3_dist_contact.MinDistance
 
             print "Links that were in contact: "
+            contact_links_names = np.array([], dtype = "|S")
             for contact in self.ContactPointWithDistance:
                 if not contact.ContactPoint.all() == 0 and contact.MinDistance < self.minDistance_of_finger:
                     print str(contact)
+                    contact_links_names = np.append(contact_links_names,str(contact))
                     self.points = np.append(self.points,[contact.ContactPoint],axis=0)
             
             self.points = np.delete(self.points,0,axis=0)
@@ -481,6 +536,7 @@ class valid_grasps():
             np.savetxt(objno_subno+'/'+self.file_name+'_JointAngles.txt',self.robot.GetDOFValues(),delimiter=',')
             np.savetxt(objno_subno+'/'+self.file_name+'_HandTransformation.txt',current_hand_transform,delimiter = ',')
             np.savetxt(objno_subno+'/'+self.file_name+'_ObjTransformation.txt',self.part.GetTransform(),delimiter = ',')
+            np.savetxt(objno_subno+'/'+self.file_name+'_ContactLinkNames.txt',contact_links_names,delimiter = ',',fmt = "%s")
             if self.is_optimal:
                 csv_writer.writerow(["obj"+str(self.obj_num),"sub"+str(self.sub_num),"grasp"+str(self.grasp_num),"optimal"+str(self.ext_opt_num), output_dof_vals.tolist(), self.COG_part.tolist(), self.points.tolist(),self.hand_position.tolist(),self.hand_quaternion.tolist()])
             else:
@@ -547,6 +603,11 @@ class valid_grasps():
             self.flag_finger_2_med = False
             self.flag_finger_3_dist = False
             self.flag_finger_3_med = False
+
+            self.flag_finger_1_closure = False
+            self.flag_finger_2_closure = False
+            self.flag_finger_3_closure = False
+
             fid.close()
             self.update_environment()
         except IOError, e:

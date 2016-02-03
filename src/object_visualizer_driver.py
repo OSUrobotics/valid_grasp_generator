@@ -20,7 +20,7 @@ def view_alignment_cb(msg):
 	ctrl.reorient_hand(T_hand, T_obj)
 
 
-def main():
+def main1():
     global transform_path, ctrl
     ctrl = object_visualizer()
     rospy.init_node('object_visualizer',anonymous = True)
@@ -29,8 +29,6 @@ def main():
     	obj_num = int(raw_input("Obj num: "))
 	sub_num = int(raw_input("Sub num: "))
 
-	#transform_path = "/media/eva/FA648F24648EE2AD" + "/csvfiles/obj" + str(obj_num) + "_sub" + str(sub_num) + "_pointcloud_csvfiles"
-	#transform_path = os.path.expanduser("~") + "/csvfiles/obj" + str(obj_num) + "_sub" + str(sub_num) + "_pointcloud_csvfiles"
 	files = os.listdir(transform_path+ "/"+ "obj" +str(obj_num)+"_sub"+str(sub_num)+"/")
         print obj_num
         sorted_files = []
@@ -45,7 +43,46 @@ def main():
 	    rospy.loginfo("Showing " + f)
 	    T_hand = np.genfromtxt(f+"_HandTransformation.txt",delimiter = ',')
             T_obj = np.genfromtxt(f+"_ObjTransformation.txt",delimiter = ',')
+            joint_angles = np.genfromtxt(f+"_JointAngles.txt",delimiter = ',')[7:18]
 	    ctrl.reorient_hand(T_hand, T_obj)
+            ctrl.set_joint_angles(joint_angles)
+
+def main2():
+    global transform_path, ctrl
+    ctrl = object_visualizer()
+    rospy.init_node('object_visualizer',anonymous = True)
+    alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
+    folder_name = transform_path+"/similar_grasp_extreme_directory/"
+    print "Reading files from : ", folder_name 
+    while not rospy.is_shutdown():
+	files = os.listdir(folder_name)
+        for csv_file in files:
+            similar_grasp_matrix = np.genfromtxt(csv_file,delimiter=',')
+            for vector in similar_grasp_matrix:
+                obj_num = vector[0]
+                sub_num = vector[1]
+                grasp_num = vector[2]
+                is_optimal = vector[3]
+                ext_opt_num = vector[4]
+                if is_optimal == 1:
+                    f = transform_path + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_optimal"+str(ext_opt_num)
+                else:
+                    f = transform_path + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_extreme"+str(ext_opt_num)
+
+
+	        rospy.loginfo("Showing " + f)
+	        T_hand = np.genfromtxt(f+"_HandTransformation.txt",delimiter = ',')
+                T_obj = np.genfromtxt(f+"_ObjTransformation.txt",delimiter = ',')
+                joint_angles = np.genfromtxt(f+"_JointAngles.txt",delimiter = ',')[7:18]
+	        ctrl.reorient_hand(T_hand, T_obj)
+                ctrl.set_joint_angles(joint_angles)
 
 if __name__=="__main__":
-    main()
+    user_input = raw_input("What do you want to do? Choose one option: \n1) Visualize grasp\n2) Generate intermediate grasp\n")
+    print "You chose: ",user_input
+    if user_input == '1':
+        main1()
+    elif user_input == '2':
+        main2()
+    else:
+        print " Your choice doesn't correspond to any of the option. Please try again"
