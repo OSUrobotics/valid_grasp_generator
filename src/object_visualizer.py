@@ -36,7 +36,10 @@ class object_visualizer(object):
     	global grasp_obj_dict
 	self.obj_num = obj_num
     	self.env.Remove(self.obj)
-	self.env.Load(self.stl_path + "/" + grasp_obj_dict[obj_num][1], {'scalegeometry':'0.001 0.001 0.001'})
+        if obj_num == 19:
+	    self.env.Load(self.stl_path + "/" + grasp_obj_dict[obj_num][1], {'scalegeometry':'0.0009 0.0009 0.0009'})
+        else:
+	    self.env.Load(self.stl_path + "/" + grasp_obj_dict[obj_num][1], {'scalegeometry':'0.001 0.001 0.001'})
 	self.obj = self.env.GetKinBody(grasp_obj_dict[obj_num][1].split('.')[0])
 	self.obj_y_rotate = grasp_obj_dict[obj_num][2]
 	T_cent = self.get_stl_centroid_transform()
@@ -89,6 +92,7 @@ class object_visualizer(object):
 
 	palm_pt = self.get_palm_point()
 	self.palm_plot = self.env.plot3(palm_pt, 10)
+        return hand_to_obj
 	#print "Final palm point: ", palm_pt[0], "\t", palm_pt[1], "\t", palm_pt[2]
 	#raw_input("Finished reorientation. How are we doing?")
 
@@ -98,6 +102,9 @@ class object_visualizer(object):
     def recenter_from_stl(self):
 	T_cent = self.get_stl_centroid_transform()
 	self.apply_link_transform(T_cent, self.hand_1)
+
+    def get_obj_transformation(self):
+        return self.obj.GetTransform()
 
     def get_stl_centroid_transform(self):
     	global obj_centroid_dict
