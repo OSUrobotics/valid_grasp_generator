@@ -49,6 +49,8 @@ class object_visualizer(object):
     def set_joint_angles(self,joint_angles):
         self.hand_1.SetDOFValues(joint_angles)
 
+    def set_hand_transformation(self,transformation):
+        self.hand_1.SetTransform(transformation)
     def set_hand_joints(self,jnt_dict):
     	hand_jnts = self.hand_1.GetJoints()
 	out_dof = self.hand_1.GetDOFValues()
@@ -72,7 +74,7 @@ class object_visualizer(object):
 
 	self.hand_1.SetDOFValues(out_dof)
 
-    def reorient_hand(self, T_palm, T_obj, use_joint_angles="False"):
+    def reorient_hand(self, T_palm, T_obj):
 	self.obj.SetVisible(1)
 	hand_to_obj = np.dot(np.linalg.inv(T_obj), T_palm)
 
@@ -92,10 +94,12 @@ class object_visualizer(object):
 
 	palm_pt = self.get_palm_point()
 	self.palm_plot = self.env.plot3(palm_pt, 10)
-        return hand_to_obj
+
 	#print "Final palm point: ", palm_pt[0], "\t", palm_pt[1], "\t", palm_pt[2]
 	#raw_input("Finished reorientation. How are we doing?")
 
+    def GetHandTransform(self):
+        return self.hand_1.GetTransform()
    
     # Recenters the robot hand relative to
     #	the centroid of the object

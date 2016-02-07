@@ -23,13 +23,14 @@ def view_alignment_cb(msg):
 def GetIntermediateTransformation(transformations,alpha):
     first_transformation = transformations[0]
     second_transformation = transformations[1]
-    intermediate_transformation = np.add(first_transformation, np.dot(np.subtract(second_transformation, first_transformation),alpha))
+    intermediate_transformation = first_transformation
+    intermediate_transformation[0:3,3] = np.add(first_transformation[0:3,3], np.dot(np.subtract(second_transformation[0:3,3], first_transformation[0:3,3]),alpha))
     return intermediate_transformation
 
 
 def GetJointAngles(Jointangles,alpha):
     initial_joint_angles = Jointangles[0]
-    final_joint_angles = JointAngles[1]
+    final_joint_angles = Jointangles[1]
     intermediate_joint_angles = np.add(initial_joint_angles, np.dot(np.subtract(final_joint_angles,initial_joint_angles),alpha))
     return intermediate_joint_angles
 
@@ -74,16 +75,18 @@ def main2():
 	files = os.listdir(folder_name)
         alpha_vector = np.arange(0,1.1,0.1)
         for csv_file in files:
-            similar_grasp_matrix = np.genfromtxt(csv_file,delimiter=',')
+            print csv_file
+            similar_grasp_matrix = np.genfromtxt(folder_name+csv_file,delimiter=',')
             JointAngles = np.empty((2,10),np.float32)
             HandTransformations = np.empty((2,4,4),np.float32)
             ContactLinkNames = []
             for i in [0,1]:
-                obj_num = similar_grasp_matrix[i]
-                sub_num = similar_grasp_matrix[i]
-                grasp_num = similar_grasp_matrix[i]
-                is_optimal = similar_grasp_matrix[i]
-                ext_opt_num = similar_grasp_matrix[i]
+                obj_num = int(similar_grasp_matrix[i,0])
+                sub_num = int(similar_grasp_matrix[i,1])
+                grasp_num = int(similar_grasp_matrix[i,2])
+                is_optimal = int(similar_grasp_matrix[i,3])
+                ext_opt_num = int(similar_grasp_matrix[i,4])
+                ctrl.set_obj(obj_num)
                 if is_optimal == 1:
                     f = transform_path + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_optimal"+str(ext_opt_num)
                 else:
@@ -97,15 +100,18 @@ def main2():
                 contact_names = np.genfromtxt(f+"_ContactLinkNames.txt",delimiter = ',',dtype="|S")
                 ContactLinkNames.append(contact_names)
                 ObjTransformation = ctrl.get_obj_transformation()
-	        HandTransformations[i] = np.add(ctrl.reorient_hand(T_hand, T_obj), ObjTransformation)
+	        ctrl.reorient_hand(T_hand, T_obj)
+	        HandTransformations[i] = ctrl.GetHandTransform()
                 ctrl.set_joint_angles(joint_angles)
 
             for i in range(len(alpha_vector)):
                 child_hand_transformation = GetIntermediateTransformation(HandTransformations,alpha_vector[i])
                 child_joint_angles = GetJointAngles(JointAngles,alpha_vector[i])
-                _ = ctrl.reorient_hand(child_hand_transformation,child_obj_transformation)
+                #_ = ctrl.reorient_hand(child_hand_transformation,ObjTransformation)
+                ctrl.set_hand_transformation(child_hand_transformation)
                 ctrl.set_joint_angles(child_joint_angles)
                 time.sleep(1)
+                print "working"
 
             
 
