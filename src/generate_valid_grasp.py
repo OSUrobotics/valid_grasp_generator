@@ -30,11 +30,10 @@ class ContPointWithDistance():
         return self.name 
 
 class valid_grasps():
-    def __init__(self):
+    def __init__(self,env):
         self.path = rospkg.RosPack().get_path('valid_grasp_generator')
-        self.env = Environment()
+        self.env = env
         self.env.Load(self.path+'/models/robots/barrett_wam.dae')
-        self.env.SetViewer('qtcoin')
         self.robot = self.env.GetRobots()[0]
         #self.Table = self.env.ReadKinBodyXMLFile('data/table.kinbody.xml')
         #self.env.Add(self.Table)
@@ -173,7 +172,7 @@ class valid_grasps():
 
     def update_environment(self):
         try:
-            user_input = raw_input("\n Do you want to retract Finger (y/n): ") or "y"
+            user_input ='n' #raw_input("\n Do you want to retract Finger (y/n): ") or "y"
             self.points = np.array([[0,0,0]])
             self.output_file_id = open('all_grasp_data.csv','a')
             csv_writer = csv.writer(self.output_file_id)
@@ -623,7 +622,9 @@ class valid_grasps():
 
 
 if __name__=="__main__":
-    generate_grasp = valid_grasps()
+    env = Environment()
+    env.SetViewer('qtcoin')
+    generate_grasp = valid_grasps(env)
     rospy.init_node('valid_grasp_generator',anonymous = True)
     rospy.loginfo("waiting for topic: grasp_extremes")
     rospy.wait_for_message("grasp_extremes",GraspSnapshot)

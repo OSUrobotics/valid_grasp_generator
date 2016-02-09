@@ -10,9 +10,18 @@ import os
 import string
 import math
 from openravepy.examples import tutorial_grasptransform
-
-
+from generate_valid_grasp import *
+import scipy
+from retract_finger import retract_fingers
 from obj_dict import *
+
+
+def ChangeColor(openrave_object,color):
+    for link in openrave_object.GetLinks():
+        geom = link.GetGeometries()
+        if not len(geom) == 0:
+            geom[0].SetDiffuseColor(color)
+
 
 class object_visualizer(object):
     def __init__(self):
@@ -25,7 +34,9 @@ class object_visualizer(object):
         self.obj = self.env.GetBodies()[0]
         error_1 = self.env.Load(self.path+'/models/robots/bhand.dae')
         self.hand_1 = self.env.GetRobots()[0]
+        ChangeColor(self.hand_1,[0,1,1])
         self.flag = False
+        self.plot_points = self.env.plot3([0,0,0],2)
         self.hand_1_mats = self.hand_1.GetLinkTransformations()
         self.part_mat = np.array(self.obj.GetTransform())
         self.obj.SetVisible(0)
@@ -41,6 +52,7 @@ class object_visualizer(object):
         else:
 	    self.env.Load(self.stl_path + "/" + grasp_obj_dict[obj_num][1], {'scalegeometry':'0.001 0.001 0.001'})
 	self.obj = self.env.GetKinBody(grasp_obj_dict[obj_num][1].split('.')[0])
+        ChangeColor(self.obj,[0.5,1,0])
 	self.obj_y_rotate = grasp_obj_dict[obj_num][2]
 	T_cent = self.get_stl_centroid_transform()
 	self.apply_link_transform(T_cent, self.obj)
@@ -49,8 +61,21 @@ class object_visualizer(object):
     def set_joint_angles(self,joint_angles):
         self.hand_1.SetDOFValues(joint_angles)
 
+    def avoid_hand_collision(self):
+        points = retract_fingers(self.env,self.hand_1,self.obj)
+        return points
+
     def set_hand_transformation(self,transformation):
         self.hand_1.SetTransform(transformation)
+
+    def PlotPoints(self, Points):
+        self.plot_points.Close()
+        self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,0], drawstyle = 1)
+
+    def TakeSnapShot(self, file_name):
+        I = self.env.GetViewer().GetCameraImage(640,480,self.env.GetViewer().GetCameraTransform(),[640,640,320,240])
+        scipy.misc.imsave(file_name,I)
+
     def set_hand_joints(self,jnt_dict):
     	hand_jnts = self.hand_1.GetJoints()
 	out_dof = self.hand_1.GetDOFValues()
@@ -74,13 +99,17 @@ class object_visualizer(object):
 
 	self.hand_1.SetDOFValues(out_dof)
 
-    def reorient_hand(self, T_palm, T_obj):
+    def reorient_hand(self, T_palm, T_obj,joint_angles = None):
 	self.obj.SetVisible(1)
 	hand_to_obj = np.dot(np.linalg.inv(T_obj), T_palm)
 
 	self.hand_1.SetTransform(hand_to_obj)
+        if joint_angles == None:
+            joint_angles = self.hand_1.GetDOFValues()
 
-	self.standard_axes = self.gt.drawTransform(np.eye(4))
+        self.hand_1.SetDOFValues(joint_angles)
+
+	#self.standard_axes = self.gt.drawTransform(np.eye(4))
 	self.recenter_from_stl()
 	if self.obj_num == 17:
 		self.standardize_ball()
@@ -93,7 +122,7 @@ class object_visualizer(object):
 		self.standardize_axes()
 
 	palm_pt = self.get_palm_point()
-	self.palm_plot = self.env.plot3(palm_pt, 10)
+	#self.palm_plot = self.env.plot3(palm_pt, 10)
 
 	#print "Final palm point: ", palm_pt[0], "\t", palm_pt[1], "\t", palm_pt[2]
 	#raw_input("Finished reorientation. How are we doing?")
@@ -109,6 +138,7 @@ class object_visualizer(object):
 
     def get_obj_transformation(self):
         return self.obj.GetTransform()
+
 
     def get_stl_centroid_transform(self):
     	global obj_centroid_dict
