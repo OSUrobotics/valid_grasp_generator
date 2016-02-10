@@ -70,7 +70,7 @@ class object_visualizer(object):
 
     def PlotPoints(self, Points):
         self.plot_points.Close()
-        self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,0], drawstyle = 1)
+        self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,1], drawstyle = 1)
 
     def TakeSnapShot(self, file_name):
         I = self.env.GetViewer().GetCameraImage(640,480,self.env.GetViewer().GetCameraTransform(),[640,640,320,240])

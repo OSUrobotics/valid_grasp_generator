@@ -62,6 +62,8 @@ def main1():
             joint_angles = np.genfromtxt(f+"_JointAngles.txt",delimiter = ',')[7:18]
 	    _ = ctrl.reorient_hand(T_hand, T_obj)
             ctrl.set_joint_angles(joint_angles)
+            points = ctrl.avoid_hand_collision()
+            ctrl.PlotPoints(points)
             user_input = raw_input("---------------------Press Enter to continue ----------------------------")
 
 def main2():
@@ -117,8 +119,8 @@ def main2():
                 ctrl.set_joint_angles(child_joint_angles)
                 points = ctrl.avoid_hand_collision()
                 ctrl.PlotPoints(points)
-                user_input = raw_input("Press enter to take snap shot")
-                ctrl.TakeSnapShot(Image_directory+object_names[0] + "_alpha_"+str(alpha_vector[i])+"_"+object_names[1]+".jpg")
+                #user_input = raw_input("Press enter to take snap shot")
+                #ctrl.TakeSnapShot(Image_directory+object_names[0] + "_alpha_"+str(alpha_vector[i])+"_"+object_names[1]+".jpg")
                 user_input = raw_input("Press Enter to continue")
             
 
