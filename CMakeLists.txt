@@ -23,9 +23,18 @@ find_package(Boost COMPONENTS
     REQUIRED)
 
 add_message_files(
-   FILES
-   GraspSnapshot.msg
+    DIRECTORY
+    msg
+    FILES
+    GraspSnapshot.msg
 )
+
+add_service_files(
+    DIRECTORY
+    srv
+    FILES
+    SnapShot.srv
+    )
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
@@ -38,7 +47,7 @@ add_message_files(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES Valid_grasp_generator
-  CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs message_runtime
+  CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs message_runtime 
   DEPENDS system_lib
 )
 

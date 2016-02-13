@@ -72,9 +72,6 @@ class object_visualizer(object):
         self.plot_points.Close()
         self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,1], drawstyle = 1)
 
-    def TakeSnapShot(self, file_name):
-        I = self.env.GetViewer().GetCameraImage(640,480,self.env.GetViewer().GetCameraTransform(),[640,640,320,240])
-        scipy.misc.imsave(file_name,I)
 
     def set_hand_joints(self,jnt_dict):
     	hand_jnts = self.hand_1.GetJoints()
@@ -109,7 +106,7 @@ class object_visualizer(object):
 
         self.hand_1.SetDOFValues(joint_angles)
 
-	self.standard_axes = self.gt.drawTransform(np.eye(4))
+	#self.standard_axes = self.gt.drawTransform(np.eye(4))
 	self.recenter_from_stl()
 	if self.obj_num == 17:
 		self.standardize_ball()

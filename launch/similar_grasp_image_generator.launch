@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <rosparam command ="load" file="$(find valid_grasp_generator)/parameter.yaml" />
+    <node name="photographer" pkg="valid_grasp_generator" type="take_snap_shot.py" output="screen" />
+    <node name="object_visualizer" pkg="valid_grasp_generator" type="object_visualizer_driver.py" output="screen" />
+</launch>

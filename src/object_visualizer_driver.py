@@ -4,6 +4,9 @@ from std_msgs.msg import Int32MultiArray
 import numpy as np
 import time
 import scipy
+import pyscreenshot
+from scipy import misc
+from valid_grasp_generator.srv import *
 transform_path = os.path.expanduser("~") + "/grasping_data"
 ctrl = None
 
@@ -72,7 +75,10 @@ def main2():
     rospy.init_node('object_visualizer',anonymous = True)
     alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
     folder_name = transform_path+"/similar_grasp_extreme_directory/"
-    Image_directory = folder_name+"/Images/"
+    Image_directory = folder_name+"Images/"
+    rospy.loginfo(" Wating for Service : /take_snap_shot")
+    rospy.wait_for_service('take_snap_shot')
+    take_image = rospy.ServiceProxy('take_snap_shot', SnapShot)
     print "Reading files from : ", folder_name 
     while not rospy.is_shutdown():
 	files = os.listdir(folder_name)
@@ -83,7 +89,7 @@ def main2():
             print similar_grasp_matrix
             JointAngles = np.empty((2,10),np.float32)
             HandTransformations = np.empty((2,4,4),np.float32)
-            object_names = np.empty((2),dtype = "|S")
+            object_names = np.empty((2),dtype = "|S50")
             ContactLinkNames = []
             for i in [0,1]:
                 obj_num = int(similar_grasp_matrix[i,0])
@@ -93,12 +99,12 @@ def main2():
                 ext_opt_num = int(similar_grasp_matrix[i,4])
                 ctrl.set_obj(obj_num)
                 if is_optimal == 1:
-                    f = "obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_optimal"+str(ext_opt_num)
+                    f = "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_optimal"+str(ext_opt_num)
                 else:
-                    f = "obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_extreme"+str(ext_opt_num)
+                    f = "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_extreme"+str(ext_opt_num)
                     
-                object_names[i] = f
-                f = transform_path + "/" + f
+                object_names[i] = f 
+                f = transform_path +"/"+"obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + f
 	        rospy.loginfo("Showing " + f)
 	        T_hand = np.genfromtxt(f+"_HandTransformation.txt",delimiter = ',')
                 T_obj = np.genfromtxt(f+"_ObjTransformation.txt",delimiter = ',')
@@ -119,12 +125,12 @@ def main2():
                 ctrl.set_joint_angles(child_joint_angles)
                 points = ctrl.avoid_hand_collision()
                 ctrl.PlotPoints(points)
-                #user_input = raw_input("Press enter to take snap shot")
-                #ctrl.TakeSnapShot(Image_directory+object_names[0] + "_alpha_"+str(alpha_vector[i])+"_"+object_names[1]+".jpg")
-                user_input = raw_input("Press Enter to continue")
-            
+                user_input = raw_input("Do you want to take image (y/n)") or "y"
+                resp = take_image(Image_directory+object_names[0] + "_alpha_"+str(alpha_vector[i])+"_"+object_names[1]+".jpg")
+                print resp.output
 
 if __name__=="__main__":
+    rospy.init_node('object_visualizer',anonymous = True)
     user_input = raw_input("What do you want to do? Choose one option: \n1) Visualize grasp\n2) Generate intermediate grasp\n")
     print "You chose: ",user_input
     if user_input == '1':
