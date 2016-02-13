@@ -5,7 +5,7 @@ import rospkg
 import sys,getopt
 import csv
 from get_all_contact_values import *
-from grasp_manager.msg import GraspSnapshot
+from valid_grasp_generator.msg import GraspSnapshot
 from shared_global import *
 from get_matrix import *
 import numpy as np
