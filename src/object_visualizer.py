@@ -70,8 +70,11 @@ class object_visualizer(object):
 
     def PlotPoints(self, Points):
         self.plot_points.Close()
-        self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,1], drawstyle = 1)
+        if len(Points) >=1:
+            self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,1], drawstyle = 1)
 
+    def Removepoints(self):
+        self.plot_points.Close()
 
     def set_hand_joints(self,jnt_dict):
     	hand_jnts = self.hand_1.GetJoints()
