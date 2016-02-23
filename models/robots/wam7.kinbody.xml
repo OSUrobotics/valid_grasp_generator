@@ -203,6 +203,9 @@
 
   <Joint name="Wrist_Roll" type="hinge">
     <Body>wam6</Body>
+    <!--Saurabh changes -->
+    <!--rotationaxis>0 0 1 -180</rotationaxis-->
+    <!--Saurabh changes -->
     <Body>wam7</Body>
     <offsetfrom>wam6</offsetfrom>
     <axis>0 0 1</axis>

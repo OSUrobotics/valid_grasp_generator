@@ -6,7 +6,7 @@
  <kinbody>
    <body name="handbase">
      <offsetfrom>wam7</offsetfrom>
-     <rotationaxis>0 0 1 90</rotationaxis>
+     <rotationaxis>0 0 1 -90</rotationaxis>
    </body>
    <joint name="dummyhand" type="hinge" enable="false">
      <body>wam7</body>

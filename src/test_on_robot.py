@@ -33,10 +33,10 @@ def GetIntermediateTransformation(Transformations,alpha):
     hand_1 = Transformations[0]
     hand_2 = Transformations[1]
     #
-    #vec_1 = mat2euler((hand_1[:3,:3]).tolist())
-    #vec_2 = mat2euler((hand_2[:3,:3]).tolist())
-    #intermediate_rotation_vec = get_intermediate_points([vec_1,vec_2],alpha)
-    #rotation_matrix = euler2mat(intermediate_rotation_vec[0],intermediate_rotation_vec[1],intermediate_rotation_vec[2])
+    vec_1 = mat2euler((hand_1[:3,:3]).tolist())
+    vec_2 = mat2euler((hand_2[:3,:3]).tolist())
+    intermediate_rotation_vec = get_intermediate_points([vec_1,vec_2],alpha)
+    rotation_matrix = euler2mat(intermediate_rotation_vec[0],intermediate_rotation_vec[1],intermediate_rotation_vec[2])
     #
     rotation_matrix = hand_1[0:3,0:3]
     points = np.append([hand_1[0:3,3]],[hand_2[0:3,3]],axis=0)
@@ -88,7 +88,7 @@ if __name__=="__main__":
     alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
     folder_name = transform_path+"/similar_grasp_extreme_directory/"
     #csv_file = GetGraspFile(folder_name)
-    csv_file = '12.csv'
+    csv_file = '1455044207.csv'
     #alpha_vector = np.array([0,0.2,0.8,1])
     alpha_vector = np.array([1])
     env = ctrl.get_env()
@@ -152,7 +152,7 @@ if __name__=="__main__":
         Tgoal[0:3,3] = np.add(Tgoal[0:3,3], np.dot(-0.062,palm_perpendicular_vector))
         print Tgoal
         sol = manip.FindIKSolution(Tgoal, IkFilterOptions.IgnoreEndEffectorCollisions)
-        print sol
+        print '['+str(sol[0])+','+str(sol[1])+','+str(sol[2])+','+str(sol[3])+','+str(sol[4])+','+str(sol[5])+','+str(sol[6])+']'
         robot.SetDOFValues(sol,manip.GetArmIndices())
 
     while not rospy.is_shutdown():
