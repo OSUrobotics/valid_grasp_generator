@@ -61,6 +61,9 @@ class object_visualizer(object):
     def set_joint_angles(self,joint_angles):
         self.hand_1.SetDOFValues(joint_angles)
 
+    def get_env(self):
+        return self.env
+
     def avoid_hand_collision(self):
         points = retract_fingers(self.env,self.hand_1,self.obj)
         return points
@@ -109,7 +112,7 @@ class object_visualizer(object):
 
         self.hand_1.SetDOFValues(joint_angles)
 
-	#self.standard_axes = self.gt.drawTransform(np.eye(4))
+	self.standard_axes = self.gt.drawTransform(np.eye(4))
 	self.recenter_from_stl()
 	if self.obj_num == 17:
 		self.standardize_ball()

@@ -16,7 +16,8 @@ class ContPointWithDistance():
 
     def __str__(self):
         return self.name 
-    
+
+
 def get_unit_vector(pt2,pt1):
     x = pt1[0] - pt2[0]
     y = pt1[1] - pt2[1]
@@ -51,9 +52,14 @@ def get_centroid(contact_list):
     for contact in contact_list:
         return contact.pos
 
-    
- 
+palm_perpendicular_vector = np.array([0,0,0])    
+def get_palm_perpendicular_vector():
+    global palm_perpendicular_vector
+    vector = palm_perpendicular_vector
+    return vector
+
 def retract_fingers(env,hand,part):
+    global palm_perpendicular_vector
     if not env.GetCollisionChecker().SetCollisionOptions(CollisionOptions.Distance | CollisionOptions.Contacts):
         collisionChecker = RaveCreateCollisionChecker(env,'pqp')
         collisionChecker.SetCollisionOptions(CollisionOptions.Distance|CollisionOptions.Contacts)
