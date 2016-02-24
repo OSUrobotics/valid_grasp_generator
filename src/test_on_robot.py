@@ -87,10 +87,9 @@ if __name__=="__main__":
     ctrl = object_visualizer()
     alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
     folder_name = transform_path+"/similar_grasp_extreme_directory/"
-    #csv_file = GetGraspFile(folder_name)
-    csv_file = '1455044207.csv'
+    similar_grasp_matrix = np.genfromtxt(transform_path+'/grasp_for_testing.csv',delimiter=',')
+    #csv_file = '1455044264.csv'
     #alpha_vector = np.array([0,0.2,0.8,1])
-    alpha_vector = np.array([1])
     env = ctrl.get_env()
     env.Load(valid_grasp_dir+'/models/robots/barrettwam.robot.xml')
     robot = env.GetRobots()[1]
@@ -100,60 +99,50 @@ if __name__=="__main__":
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype = IkParameterization.Type.Transform6D)
     if not ikmodel.load():
         ikmodel.autogenerate()
-    
-    similar_grasp_matrix = np.genfromtxt(folder_name+csv_file,delimiter=',')
-    print similar_grasp_matrix
-    JointAngles = np.empty((2,10),np.float32)
-    HandTransformations = np.empty((2,4,4),np.float32)
-    object_names = np.empty((2),dtype = "|S50")
-    ContactLinkNames = []
-    for i in [0,1]:
-        obj_num = int(similar_grasp_matrix[i,0])
-        sub_num = int(similar_grasp_matrix[i,1])
-        grasp_num = int(similar_grasp_matrix[i,2])
-        is_optimal = int(similar_grasp_matrix[i,3])
-        ext_opt_num = int(similar_grasp_matrix[i,4])
+
+    for grasp_vector in similar_grasp_matrix:
+
+        ContactLinkNames = []
+
+        obj_num = int(grasp_vector[0])
+        sub_num = int(grasp_vector[1])
+        grasp_num = int(grasp_vector[2])
+        is_optimal = int(grasp_vector[3])
+        ext_opt_num = int(grasp_vector[4])
         ctrl.set_obj(obj_num)
+
         if is_optimal == 1:
             f = "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_optimal"+str(ext_opt_num)
         else:
             f = "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_extreme"+str(ext_opt_num)
             
-        object_names[i] = f 
         f = transform_path +"/"+"obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + f
         rospy.loginfo("Showing " + f)
         T_hand = np.genfromtxt(f+"_HandTransformation.txt",delimiter = ',')
         T_obj = np.genfromtxt(f+"_ObjTransformation.txt",delimiter = ',')
         joint_angles = np.genfromtxt(f+"_JointAngles.txt",delimiter = ',')[7:18]
-        JointAngles[i] = joint_angles
+        hand_command = np.genfromtxt(f+"_closeddofvals.txt",delimiter=',')
         contact_names = np.genfromtxt(f+"_ContactLinkNames.txt",delimiter = ',',dtype="|S")
         ContactLinkNames.append(contact_names)
         ctrl.reorient_hand(T_hand, T_obj,joint_angles)
         user_in = raw_input("Press Enter to continue")
-        HandTransformations[i] = ctrl.GetHandTransform()
-        print HandTransformations[i]
+        HandTransformation = ctrl.GetHandTransform()
         ctrl.set_joint_angles(joint_angles)
-    
-    for alpha in alpha_vector:
-        print "File name: ",csv_file
-        child_hand_transformation = GetIntermediateTransformation(HandTransformations,alpha)
-        child_joint_angles = GetJointAngles(JointAngles,alpha)
-        #_ = ctrl.reorient_hand(child_hand_transformation,ObjTransformation)
-        ctrl.set_hand_transformation(child_hand_transformation)
-        ctrl.set_joint_angles(child_joint_angles)
-        points = ctrl.avoid_hand_collision()
-        ctrl.PlotPoints(points)
+        
+        print "grasp vector:  ",grasp_vector
         
         Tgoal = ctrl.hand_1.GetLinkTransformations()[2] 
-        print Tgoal
-        print
-        palm_perpendicular_vector = get_palm_perpendicular_vector()
-        print palm_perpendicular_vector
+        palm_perpendicular_vector = get_palm_perpendicular_vector(ctrl.hand_1)
         Tgoal[0:3,3] = np.add(Tgoal[0:3,3], np.dot(-0.062,palm_perpendicular_vector))
-        print Tgoal
         sol = manip.FindIKSolution(Tgoal, IkFilterOptions.IgnoreEndEffectorCollisions)
-        print '['+str(sol[0])+','+str(sol[1])+','+str(sol[2])+','+str(sol[3])+','+str(sol[4])+','+str(sol[5])+','+str(sol[6])+']'
-        robot.SetDOFValues(sol,manip.GetArmIndices())
+        try:
+            print '['+str(sol[0])+','+str(sol[1])+','+str(sol[2])+','+str(sol[3])+','+str(sol[4])+','+str(sol[5])+','+str(sol[6])+']'
+            robot.SetDOFValues(sol,manip.GetArmIndices())
+            user_in = raw_input("Press Enter to continue")
+        except:
+            rospy.loginfo( "solution not found")
+            robot.SetDOFValues([0,0,0,0,0,0,0],manip.GetArmIndices())
+        time.sleep(1)
 
     while not rospy.is_shutdown():
         n = 1

@@ -53,8 +53,15 @@ def get_centroid(contact_list):
         return contact.pos
 
 palm_perpendicular_vector = np.array([0,0,0])    
-def get_palm_perpendicular_vector():
+def get_palm_perpendicular_vector(hand):
     global palm_perpendicular_vector
+    palm_link = hand.GetLinks()[0]
+    hand_link = hand.GetLinks()[0]
+    palm_points = hand_link.GetCollisionData().vertices
+    palm_link_pose = poseFromMatrix(palm_link.GetTransform())
+    transformed_points = poseTransformPoints(palm_link_pose, palm_points)
+    palm_center = np.mean(np.array([transformed_points[3687],transformed_points[3875],transformed_points[3605],transformed_points[3782]]), axis = 0)
+    palm_perpendicular_vector = get_perpendicular_vector(get_unit_vector(transformed_points[3687],palm_center),get_unit_vector(transformed_points[3605],palm_center))
     vector = palm_perpendicular_vector
     return vector
 
