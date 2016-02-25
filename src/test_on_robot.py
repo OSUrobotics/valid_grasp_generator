@@ -13,7 +13,8 @@ import os
 from shared_global import valid_grasp_dir
 from retract_finger import get_palm_perpendicular_vector
 transform_path = os.path.expanduser("~") + "/grasping_data"
-
+from wam_msgs.msg import HandCommand
+from wam_srvs.srv import JointMove, CartPosMove
 ctrl = None
 
 def view_alignment_cb(msg):
@@ -78,18 +79,76 @@ def GetGraspFile(folder_name):
     print
     print "File not found"
     print
-    GetGraspData(folder_name)
+
+def republish_hand_command(hand_pub, msg):
+    if msg == None:
+        return
+    else:
+        for i in range(5):
+            hand_pub.publish(msg)
+
+
+def run_trial(ros_dict, wam_joints_position, hand_cmd):
+    print "executing"
+    ros_dict['wam_jnt_srv']([0,0,0,0,0,0,0])
+    raw_input("Wait for robot to reach ZERO position. Then Press [Enter]")
+    null_hand_commands = HandCommand()
+    null_hand_commands.f1 =0
+    null_hand_commands.f2 =0
+    null_hand_commands.f3 =0
+    null_hand_commands.spread =0
+    republish_hand_command(ros_dict['hand_cmd_pub'], null_hand_commands)
+    for i in range(5):
+        # Move the arm
+        #raw_input("Press [Enter] to move the arm.")
+        ros_dict['wam_jnt_srv'](wam_joints_position)
+        raw_input("Place the object in the proper location and press [Enter]")
+        republish_hand_command(ros_dict['hand_cmd_pub'],hand_cmd) 
+        raw_input("Press [Enter] to execute shake test")
+        shake_wam(ros_dict)
+        raw_input("Press [Enter] to move the object back")
+        ros_dict['wam_jnt_srv'](wam_joints_position)
+        raw_input("Press [Enter] to open the fingers")
+        republish_hand_command(ros_dict['hand_cmd_pub'], null_hand_commands)
+        raw_input("Press [Enter] to go to ZERO position")
+        ros_dict['wam_jnt_srv']([0,0,0,0,0,0,0])
+        raw_input("Press [Enter] to continue again")
+
+
+
+
+def shake_wam(ros_dict):
+	rospy.loginfo("Initiating shake.")
+	base_pose = [-.7, -.1, .15]
+	end_pose = [-.7, -.1, .35]
+
+	velocity = rospy.get_param("/wam/velocity")
+	sleep_time = 1 / velocity
+
+	for i in range(4):
+		rospy.loginfo("Shaking once.")
+		ros_dict['cart_move_srv'](base_pose)
+		time.sleep(sleep_time)
+		ros_dict['cart_move_srv'](end_pose)
+		time.sleep(sleep_time)
 
 
 if __name__=="__main__":
-    rospy.init_node('test_on_robot',anonymous = True)
-    global transform_path, ctrl
+    rospy.init_node('test_on_robot',anonymous = True )
+    # Jackson's code
+    
+    ros_dict = {}
+    ros_dict['hand_cmd_pub'] = rospy.Publisher("/bhand/hand_cmd", HandCommand, queue_size=1, latch=True)
+    rospy.wait_for_service('/wam/joint_move')
+    ros_dict['wam_jnt_srv'] = rospy.ServiceProxy("/wam/joint_move", JointMove)
+    ros_dict['cart_move_srv'] = rospy.ServiceProxy("/wam/cart_move", CartPosMove)
+
+
+
     ctrl = object_visualizer()
     alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
     folder_name = transform_path+"/similar_grasp_extreme_directory/"
     similar_grasp_matrix = np.genfromtxt(transform_path+'/grasp_for_testing.csv',delimiter=',')
-    #csv_file = '1455044264.csv'
-    #alpha_vector = np.array([0,0.2,0.8,1])
     env = ctrl.get_env()
     env.Load(valid_grasp_dir+'/models/robots/barrettwam.robot.xml')
     robot = env.GetRobots()[1]
@@ -101,49 +160,53 @@ if __name__=="__main__":
         ikmodel.autogenerate()
 
     for grasp_vector in similar_grasp_matrix:
-
-        ContactLinkNames = []
-
         obj_num = int(grasp_vector[0])
-        sub_num = int(grasp_vector[1])
-        grasp_num = int(grasp_vector[2])
-        is_optimal = int(grasp_vector[3])
-        ext_opt_num = int(grasp_vector[4])
-        ctrl.set_obj(obj_num)
+        if obj_num == 5:
+            sub_num = int(grasp_vector[1])
+            grasp_num = int(grasp_vector[2])
+            is_optimal = int(grasp_vector[3])
+            ext_opt_num = int(grasp_vector[4])
+            ctrl.set_obj(obj_num)
 
-        if is_optimal == 1:
-            f = "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_optimal"+str(ext_opt_num)
-        else:
-            f = "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_extreme"+str(ext_opt_num)
+            if is_optimal == 1:
+                f = "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_optimal"+str(ext_opt_num)
+            else:
+                f = "obj"+str(obj_num)+"_sub"+str(sub_num)+"_grasp"+str(grasp_num)+"_extreme"+str(ext_opt_num)
+                
+            f = transform_path +"/"+"obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + f
+            rospy.loginfo("Showing " + f)
+            T_hand = np.genfromtxt(f+"_HandTransformation.txt",delimiter = ',')
+            T_obj = np.genfromtxt(f+"_ObjTransformation.txt",delimiter = ',')
+            joint_angles = np.genfromtxt(f+"_JointAngles.txt",delimiter = ',')[7:18]
+            hand_command = np.genfromtxt(f+"_closeddofvals.txt",delimiter=',')
+            hand_cmd = HandCommand()
+            hand_cmd.f1 = hand_command[0]
+            hand_cmd.f2 = hand_command[1]
+            hand_cmd.f3 = hand_command[2]
+            hand_cmd.spread = hand_command[3]
+
+            ctrl.reorient_hand(T_hand, T_obj,joint_angles)
+            user_in = raw_input("Press Enter to continue")
+            HandTransformation = ctrl.GetHandTransform()
+            ctrl.set_joint_angles(joint_angles)
             
-        f = transform_path +"/"+"obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + f
-        rospy.loginfo("Showing " + f)
-        T_hand = np.genfromtxt(f+"_HandTransformation.txt",delimiter = ',')
-        T_obj = np.genfromtxt(f+"_ObjTransformation.txt",delimiter = ',')
-        joint_angles = np.genfromtxt(f+"_JointAngles.txt",delimiter = ',')[7:18]
-        hand_command = np.genfromtxt(f+"_closeddofvals.txt",delimiter=',')
-        contact_names = np.genfromtxt(f+"_ContactLinkNames.txt",delimiter = ',',dtype="|S")
-        ContactLinkNames.append(contact_names)
-        ctrl.reorient_hand(T_hand, T_obj,joint_angles)
-        user_in = raw_input("Press Enter to continue")
-        HandTransformation = ctrl.GetHandTransform()
-        ctrl.set_joint_angles(joint_angles)
-        
-        print "grasp vector:  ",grasp_vector
-        
-        Tgoal = ctrl.hand_1.GetLinkTransformations()[2] 
-        palm_perpendicular_vector = get_palm_perpendicular_vector(ctrl.hand_1)
-        Tgoal[0:3,3] = np.add(Tgoal[0:3,3], np.dot(-0.062,palm_perpendicular_vector))
-        sol = manip.FindIKSolution(Tgoal, IkFilterOptions.IgnoreEndEffectorCollisions)
-        try:
+            print "grasp vector:  ",grasp_vector
+            
+            Tgoal = ctrl.hand_1.GetLinkTransformations()[2] 
+            palm_perpendicular_vector = get_palm_perpendicular_vector(ctrl.hand_1)
+            Tgoal[0:3,3] = np.add(Tgoal[0:3,3], np.dot(-0.062,palm_perpendicular_vector))
+            sol = manip.FindIKSolution(Tgoal, IkFilterOptions.IgnoreEndEffectorCollisions)
             print '['+str(sol[0])+','+str(sol[1])+','+str(sol[2])+','+str(sol[3])+','+str(sol[4])+','+str(sol[5])+','+str(sol[6])+']'
             robot.SetDOFValues(sol,manip.GetArmIndices())
-            user_in = raw_input("Press Enter to continue")
-        except:
-            rospy.loginfo( "solution not found")
-            robot.SetDOFValues([0,0,0,0,0,0,0],manip.GetArmIndices())
-        time.sleep(1)
-
+            print hand_command
+            user_in = raw_input("Do you want to move practical robot? (y/n)")or "y"
+            print 
+            if user_in == "y":
+                run_trial(ros_dict, sol, hand_cmd)
+            raw_input("Press [Enter] to continue")
+                #rospy.loginfo( "solution not found")
+                #robot.SetDOFValues([0,0,0,0,0,0,0],manip.GetArmIndices())
+            
     while not rospy.is_shutdown():
         n = 1
 
