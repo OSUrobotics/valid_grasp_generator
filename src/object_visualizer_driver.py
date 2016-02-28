@@ -50,7 +50,7 @@ def GetJointAngles(Jointangles,alpha):
 def main1():
     global transform_path, ctrl
     ctrl = object_visualizer()
-    rospy.init_node('object_visualizer',anonymous = True)
+    take_image = rospy.ServiceProxy('take_snap_shot', SnapShot)
     alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
     while not rospy.is_shutdown():
     	obj_num = int(raw_input("Obj num: "))
@@ -75,13 +75,21 @@ def main1():
 	    _ = ctrl.reorient_hand(T_hand, T_obj)
             ctrl.set_joint_angles(joint_angles)
             points = ctrl.avoid_hand_collision()
-            ctrl.PlotPoints(points)
-            user_input = raw_input("---------------------Press Enter to continue ----------------------------")
+            #ctrl.PlotPoints(points)
+            user_input = raw_input("Do you want to include dummy hands in the environment? (y/n)?") or "x"
+            if user_input == "n":
+                ctrl.hide_other_hands()
+            elif user_input == "y":
+                new_user_in = raw_input("Enter the hand you want to move: ")
+                ctrl.set_dummy_hand_transform(new_user_in)
+
+            snapshot = raw_input("Do you want to take picture? (y/n)") or "n"
+            if snapshot == "y":
+                resp = take_image(transform_path+ f.split('_Hand')[0]+'_for_paper.jpg')
 
 def main2():
     global transform_path, ctrl
     ctrl = object_visualizer()
-    rospy.init_node('object_visualizer',anonymous = True)
     alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
     folder_name = transform_path+"/similar_grasp_extreme_directory/"
     Image_directory = transform_path+"/Images/"

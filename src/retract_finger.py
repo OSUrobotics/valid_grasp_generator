@@ -134,7 +134,6 @@ def retract_fingers(env,hand,part):
             palm_link = hand.GetLinks()[0]
             start_time = time.time()
             while not finger_retracted:
-                rospy.set_param("Ready_for_input",False)
                 hand_dof = hand.GetDOFValues()
                 finger_1_dof_value = mapper(hand_dof[3]+hand_dof[4])
                 finger_2_dof_value = mapper(hand_dof[6]+hand_dof[7])
@@ -478,8 +477,6 @@ def retract_fingers(env,hand,part):
 #        output_file_id.close()
 #        rospy.set_param("Things_done",True)
         return points
-#        
-    except rospy.ROSInterruptException, e:
-        #print 'exiting', e
-        sys.exit()
 
+    except:
+        print "Exiting"
