@@ -9,7 +9,8 @@ from scipy import misc
 from valid_grasp_generator.srv import *
 from get_intermediate_points import get_intermediate_points
 from angle_format_changer import *
-transform_path = os.path.expanduser("~") + "/grasping_data"
+#transform_path = os.path.expanduser("~") + "/grasping_data"
+transform_path = os.path.expanduser("~") + "/bad_grasps"
 ctrl = None
 
 def view_alignment_cb(msg):
@@ -71,17 +72,19 @@ def main1():
 	    rospy.loginfo("Showing " + f)
 	    T_hand = np.genfromtxt(f+"_HandTransformation.txt",delimiter = ',')
             T_obj = np.genfromtxt(f+"_ObjTransformation.txt",delimiter = ',')
-            joint_angles = np.genfromtxt(f+"_JointAngles.txt",delimiter = ',')[7:18]
+            #joint_angles = np.genfromtxt(f+"_JointAngles.txt",delimiter = ',')[7:18] #for barrett arm
+            joint_angles = np.genfromtxt(f+"_JointAngles.txt",delimiter = ',')[6:17] # for adept arm
+            joint_angles = np.append(np.array([0,0]),joint_angles) # for adept arm
 	    _ = ctrl.reorient_hand(T_hand, T_obj)
             ctrl.set_joint_angles(joint_angles)
             points = ctrl.avoid_hand_collision()
             #ctrl.PlotPoints(points)
-            user_input = raw_input("Do you want to include dummy hands in the environment? (y/n)?") or "x"
-            if user_input == "n":
-                ctrl.hide_other_hands()
-            elif user_input == "y":
-                new_user_in = raw_input("Enter the hand you want to move: ")
-                ctrl.set_dummy_hand_transform(new_user_in)
+            #user_input = raw_input("Do you want to include dummy hands in the environment? (y/n)?") or "x"
+            #if user_input == "n":
+            #    ctrl.hide_other_hands()
+            #elif user_input == "y":
+            #    new_user_in = raw_input("Enter the hand you want to move: ")
+            #    ctrl.set_dummy_hand_transform(new_user_in)
 
             snapshot = raw_input("Do you want to take picture? (y/n)") or "n"
             if snapshot == "y":
