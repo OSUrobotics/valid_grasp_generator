@@ -15,3 +15,5 @@ Folders Description:
 
 Before running the similar_grasp_generator.launch please run the command roscore and rosrun grasp_manager replay_extraction.py. 
 
+You have to run similar_grasp_generator.launch before running object_visualizer_driver.py as the similar_grasp_generator will save the transformation of the BarrettHand and object a folder.
+
