@@ -23,7 +23,7 @@
 #include <openrave/interface.h>
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-#include "valid_grasp_generator/GraspSnapshot.h"
+#include "grasp_data_msgs/GraspSnapshot.h"
 #include <iostream>
 #include <vector>
 #include <boost/python.hpp>
