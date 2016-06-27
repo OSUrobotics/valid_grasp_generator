@@ -54,10 +54,13 @@ def main1():
     take_image = rospy.ServiceProxy('take_snap_shot', SnapShot)
     alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
     while not rospy.is_shutdown():
-    	obj_num = int(raw_input("Obj num: "))
-	sub_num = int(raw_input("Sub num: "))
-        if len(obj_num)==0:
+        obj_num_string = raw_input("Obj num: ")
+	sub_num_string = raw_input("Sub num: ")
+        if len(obj_num_string)==0:
+            print "Please Enter valid Object number and subject number OR ctrl-\ to exit"
             continue
+    	obj_num = int(obj_num_string)
+    	sub_num = int(sub_num_string)
 
 	files = os.listdir(transform_path+ "/"+ "obj" +str(obj_num)+"_sub"+str(sub_num)+"/")
         print obj_num
