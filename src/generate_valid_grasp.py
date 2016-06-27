@@ -189,270 +189,270 @@ class valid_grasps():
             point_along_palm_perpendicular_vector = np.add(palm_center,np.dot(-0.1,palm_perpendicular_vector))
             #pt_handler = self.env.plot3(np.array([point_along_palm_perpendicular_vector,transformed_points[3687],transformed_points[3875],transformed_points[3605],transformed_points[3782],palm_center]), 10,colors = np.array([0,0,0]))
             start_time = time.time()
-            if not (user_input == 'n' or user_input == 'N'):
-                print "Retracting Fingers: "
-                while not self.finger_retracted:
-                    rospy.set_param("Ready_for_input",False)
-                    active_dof = self.robot.GetDOFValues()
-                    hand_dof = active_dof[9:18]
-                    finger_1_dof_value = self.mapper(hand_dof[1]+hand_dof[2])
-                    finger_2_dof_value = self.mapper(hand_dof[4]+hand_dof[5])
-                    finger_3_dof_value = self.mapper(hand_dof[6]+hand_dof[7])
-                    finger_spread = hand_dof[0]
-                    output_dof_vals = np.array([finger_1_dof_value,finger_2_dof_value,finger_3_dof_value,finger_spread])
+            #if not (user_input == 'n' or user_input == 'N'):
+            #    print "Retracting Fingers: "
+            #    while not self.finger_retracted:
+            #        rospy.set_param("Ready_for_input",False)
+            #        active_dof = self.robot.GetDOFValues()
+            #        hand_dof = active_dof[9:18]
+            #        finger_1_dof_value = self.mapper(hand_dof[1]+hand_dof[2])
+            #        finger_2_dof_value = self.mapper(hand_dof[4]+hand_dof[5])
+            #        finger_3_dof_value = self.mapper(hand_dof[6]+hand_dof[7])
+            #        finger_spread = hand_dof[0]
+            #        output_dof_vals = np.array([finger_1_dof_value,finger_2_dof_value,finger_3_dof_value,finger_spread])
 
-                    rospy.loginfo("Got grasp_extremes")
-                    self.plot_points.Close()
+            #        rospy.loginfo("Got grasp_extremes")
+            #        self.plot_points.Close()
            
 
-                    # variables for changing joint angles values
-                    finger_1_joint_angles = finger_1_dof_value
-                    finger_2_joint_angles = finger_2_dof_value
-                    finger_3_joint_angles = finger_3_dof_value
+            #        # variables for changing joint angles values
+            #        finger_1_joint_angles = finger_1_dof_value
+            #        finger_2_joint_angles = finger_2_dof_value
+            #        finger_3_joint_angles = finger_3_dof_value
 
-                    # Translation of the object away from the palm
+            #        # Translation of the object away from the palm
 
-                    palm_vs_part = self.env.CheckCollision(self.part,self.palm_link,report = self.report)
-                    self.palm_contact.MinDistance = self.report.minDistance
-                    self.robot_all_link_collision_check[0] = palm_vs_part
-                    print "palm",palm_vs_part
-                    
-                    contact_points = self.report.contacts
-                    contact_points_list = np.array([[0,0,0]])
-                    if palm_vs_part:
-                        self.flag_palm = False
-                        for contact in contact_points:
-                            contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            #        palm_vs_part = self.env.CheckCollision(self.part,self.palm_link,report = self.report)
+            #        self.palm_contact.MinDistance = self.report.minDistance
+            #        self.robot_all_link_collision_check[0] = palm_vs_part
+            #        print "palm",palm_vs_part
+            #        
+            #        contact_points = self.report.contacts
+            #        contact_points_list = np.array([[0,0,0]])
+            #        if palm_vs_part:
+            #            self.flag_palm = False
+            #            for contact in contact_points:
+            #                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-                        contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                        self.palm_contact.ContactPoint = np.mean(contact_points_list,axis=0)
+            #            contact_points_list = np.delete(contact_points_list, 0,axis=0)
+            #            self.palm_contact.ContactPoint = np.mean(contact_points_list,axis=0)
 
-                        translation_unit_vector = self.get_unit_vector(point_along_palm_perpendicular_vector, self.palm_contact.ContactPoint)
-                        part_transform = self.part.GetTransform()
-                        part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
-                        part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
-                        part_transform[2,3] = (part_transform[2,3] + self.translational_threshold*translation_unit_vector[2])
-                        self.part.SetTransform(part_transform)
-                    else:
-                        self.flag_palm = True
-                    finger_1_prox_vs_part = self.env.CheckCollision(self.part,self.finger_1_prox,report = self.report)
-                    self.finger_1_prox_contact.MinDistance = self.report.minDistance
-                    self.robot_all_link_collision_check[1]=finger_1_prox_vs_part
-                    contact_points = self.report.contacts
-                    contact_points_list = np.array([[0,0,0]])
+            #            translation_unit_vector = self.get_unit_vector(point_along_palm_perpendicular_vector, self.palm_contact.ContactPoint)
+            #            part_transform = self.part.GetTransform()
+            #            part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
+            #            part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
+            #            part_transform[2,3] = (part_transform[2,3] + self.translational_threshold*translation_unit_vector[2])
+            #            self.part.SetTransform(part_transform)
+            #        else:
+            #            self.flag_palm = True
+            #        finger_1_prox_vs_part = self.env.CheckCollision(self.part,self.finger_1_prox,report = self.report)
+            #        self.finger_1_prox_contact.MinDistance = self.report.minDistance
+            #        self.robot_all_link_collision_check[1]=finger_1_prox_vs_part
+            #        contact_points = self.report.contacts
+            #        contact_points_list = np.array([[0,0,0]])
 
-                    if finger_1_prox_vs_part:
-                        self.flag_finger_1 = False
-                        for contact in contact_points:
-                            contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            #        if finger_1_prox_vs_part:
+            #            self.flag_finger_1 = False
+            #            for contact in contact_points:
+            #                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-                        contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                        self.finger_1_prox_contact.ContactPoint = np.mean(contact_points_list,axis = 0)
-                        translation_unit_vector = self.get_unit_vector(point_along_palm_perpendicular_vector, self.finger_1_prox_contact.ContactPoint)
-                        part_transform = self.part.GetTransform()
-                        part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
-                        part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
-                        part_transform[2,3] = (part_transform[2,3] + self.translational_threshold*translation_unit_vector[2])
-                        self.part.SetTransform(part_transform)
-                    else:
-                        self.flag_finger_1 = True
-                    finger_2_prox_vs_part = self.env.CheckCollision(self.part,self.finger_2_prox,report=self.report)                 
-                    self.finger_2_prox_contact.MinDistance = self.report.minDistance
-                    self.robot_all_link_collision_check[2]=finger_2_prox_vs_part
-                    contact_points_list = np.array([[0,0,0]])
-                    if finger_2_prox_vs_part:
-                        self.flag_finger_2 = False
-                        for contact in contact_points:
-                            contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            #            contact_points_list = np.delete(contact_points_list, 0,axis=0)
+            #            self.finger_1_prox_contact.ContactPoint = np.mean(contact_points_list,axis = 0)
+            #            translation_unit_vector = self.get_unit_vector(point_along_palm_perpendicular_vector, self.finger_1_prox_contact.ContactPoint)
+            #            part_transform = self.part.GetTransform()
+            #            part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
+            #            part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
+            #            part_transform[2,3] = (part_transform[2,3] + self.translational_threshold*translation_unit_vector[2])
+            #            self.part.SetTransform(part_transform)
+            #        else:
+            #            self.flag_finger_1 = True
+            #        finger_2_prox_vs_part = self.env.CheckCollision(self.part,self.finger_2_prox,report=self.report)                 
+            #        self.finger_2_prox_contact.MinDistance = self.report.minDistance
+            #        self.robot_all_link_collision_check[2]=finger_2_prox_vs_part
+            #        contact_points_list = np.array([[0,0,0]])
+            #        if finger_2_prox_vs_part:
+            #            self.flag_finger_2 = False
+            #            for contact in contact_points:
+            #                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-                        contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                        self.finger_2_prox_contact.ContactPoint = np.mean(contact_points_list,axis = 0)
-                        
-                        translation_unit_vector = self.get_unit_vector(point_along_palm_perpendicular_vector, self.finger_2_prox_contact.ContactPoint)
-                        part_transform = self.part.GetTransform()
-                        part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
-                        part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
-                        part_transform[2,3] = (part_transform[2,3] + self.translational_threshold*translation_unit_vector[2])
-                        self.part.SetTransform(part_transform)
-                    else:
-                        self.flag_finger_2 = True
-                    
+            #            contact_points_list = np.delete(contact_points_list, 0,axis=0)
+            #            self.finger_2_prox_contact.ContactPoint = np.mean(contact_points_list,axis = 0)
+            #            
+            #            translation_unit_vector = self.get_unit_vector(point_along_palm_perpendicular_vector, self.finger_2_prox_contact.ContactPoint)
+            #            part_transform = self.part.GetTransform()
+            #            part_transform[0,3] = (part_transform[0,3] + self.translational_threshold*translation_unit_vector[0])
+            #            part_transform[1,3] = (part_transform[1,3] + self.translational_threshold*translation_unit_vector[1])
+            #            part_transform[2,3] = (part_transform[2,3] + self.translational_threshold*translation_unit_vector[2])
+            #            self.part.SetTransform(part_transform)
+            #        else:
+            #            self.flag_finger_2 = True
+            #        
 
-                    if self.flag_palm and self.flag_finger_1 and self.flag_finger_2:
-                        self.translation_done = True
+            #        if self.flag_palm and self.flag_finger_1 and self.flag_finger_2:
+            #            self.translation_done = True
 
-                    # Move the fingers away from the object
-                    if self.translation_done:
-                        finger_1_med_vs_part = self.env.CheckCollision(self.part,self.finger_1_med,report = self.report)
-                        self.finger_1_med_contact.MinDistance = self.report.minDistance
-                        self.robot_all_link_collision_check[3]=finger_1_med_vs_part
-                        print "finger 1 med", finger_1_med_vs_part
-                        
-                        contact_points = self.report.contacts
-                        contact_points_list = np.array([[0,0,0]])
-                        if self.finger_1_med_contact.MinDistance < self.minDistance_of_finger and not finger_1_med_vs_part:
-                            for contact in contact_points:
-                                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            #        # Move the fingers away from the object
+            #        if self.translation_done:
+            #            finger_1_med_vs_part = self.env.CheckCollision(self.part,self.finger_1_med,report = self.report)
+            #            self.finger_1_med_contact.MinDistance = self.report.minDistance
+            #            self.robot_all_link_collision_check[3]=finger_1_med_vs_part
+            #            print "finger 1 med", finger_1_med_vs_part
+            #            
+            #            contact_points = self.report.contacts
+            #            contact_points_list = np.array([[0,0,0]])
+            #            if self.finger_1_med_contact.MinDistance < self.minDistance_of_finger and not finger_1_med_vs_part:
+            #                for contact in contact_points:
+            #                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-                            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                            self.finger_1_med_contact.ContactPoint = np.mean(contact_points_list, axis=0)
-                            self.flag_finger_1_med = True
-                            self.flag_finger_1_closure = True
-                        elif not self.flag_finger_1_med and finger_1_med_vs_part:
-                            finger_1_joint_angles = finger_1_joint_angles -  self.joint_retract_threshold
-                            self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
+            #                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+            #                self.finger_1_med_contact.ContactPoint = np.mean(contact_points_list, axis=0)
+            #                self.flag_finger_1_med = True
+            #                self.flag_finger_1_closure = True
+            #            elif not self.flag_finger_1_med and finger_1_med_vs_part:
+            #                finger_1_joint_angles = finger_1_joint_angles -  self.joint_retract_threshold
+            #                self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
-                        finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
-                        self.finger_1_dist_contact.MinDistance = self.report.minDistance
-                        self.robot_all_link_collision_check[4]=finger_1_dist_vs_part
-                        print "finger 1 distal",finger_1_dist_vs_part
-                        
-                        contact_points = self.report.contacts
-                        contact_points_list = np.array([[0,0,0]])
-                        if self.finger_1_dist_contact.MinDistance < self.minDistance_of_finger and not finger_1_dist_vs_part:
-                            for contact in contact_points:
-                                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            #            finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
+            #            self.finger_1_dist_contact.MinDistance = self.report.minDistance
+            #            self.robot_all_link_collision_check[4]=finger_1_dist_vs_part
+            #            print "finger 1 distal",finger_1_dist_vs_part
+            #            
+            #            contact_points = self.report.contacts
+            #            contact_points_list = np.array([[0,0,0]])
+            #            if self.finger_1_dist_contact.MinDistance < self.minDistance_of_finger and not finger_1_dist_vs_part:
+            #                for contact in contact_points:
+            #                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-                            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                            self.finger_1_dist_contact.ContactPoint = np.mean(contact_points_list,axis=0)
-                            self.flag_finger_1_dist = True
-                        elif not self.flag_finger_1_dist and finger_1_dist_vs_part:
-                            finger_1_joint_angles = finger_1_joint_angles - self.joint_retract_threshold
-                            self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
+            #                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+            #                self.finger_1_dist_contact.ContactPoint = np.mean(contact_points_list,axis=0)
+            #                self.flag_finger_1_dist = True
+            #            elif not self.flag_finger_1_dist and finger_1_dist_vs_part:
+            #                finger_1_joint_angles = finger_1_joint_angles - self.joint_retract_threshold
+            #                self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
-                        finger_2_med_vs_part = self.env.CheckCollision(self.part,self.finger_2_med,report = self.report)
-                        self.finger_2_med_contact.MinDistance = self.report.minDistance
-                        self.robot_all_link_collision_check[5]=finger_2_med_vs_part
-                        print "finger 2 med",finger_2_med_vs_part
-                        
-                        contact_points = self.report.contacts
-                        contact_points_list = np.array([[0,0,0]])
-                        if self.finger_2_med_contact.MinDistance < self.minDistance_of_finger and not finger_2_med_vs_part:
-                            for contact in contact_points:
-                                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            #            finger_2_med_vs_part = self.env.CheckCollision(self.part,self.finger_2_med,report = self.report)
+            #            self.finger_2_med_contact.MinDistance = self.report.minDistance
+            #            self.robot_all_link_collision_check[5]=finger_2_med_vs_part
+            #            print "finger 2 med",finger_2_med_vs_part
+            #            
+            #            contact_points = self.report.contacts
+            #            contact_points_list = np.array([[0,0,0]])
+            #            if self.finger_2_med_contact.MinDistance < self.minDistance_of_finger and not finger_2_med_vs_part:
+            #                for contact in contact_points:
+            #                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-                            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                            self.finger_2_med_contact.ContactPoint = np.mean(contact_points_list,axis=0)
-                            self.flag_finger_2_med = True
-                            self.flag_finger_2_closure = True
-                        elif not self.flag_finger_2_med and finger_2_med_vs_part:
-                            finger_2_joint_angles = finger_2_joint_angles - self.joint_retract_threshold
-                            self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
+            #                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+            #                self.finger_2_med_contact.ContactPoint = np.mean(contact_points_list,axis=0)
+            #                self.flag_finger_2_med = True
+            #                self.flag_finger_2_closure = True
+            #            elif not self.flag_finger_2_med and finger_2_med_vs_part:
+            #                finger_2_joint_angles = finger_2_joint_angles - self.joint_retract_threshold
+            #                self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
 
-                        finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
-                        self.finger_2_dist_contact.MinDistance = self.report.minDistance
-                        self.robot_all_link_collision_check[6]=finger_2_dist_vs_part
-                        print "finger 2 dist",finger_2_dist_vs_part
-                        
-                        contact_points = self.report.contacts
-                        contact_points_list = np.array([[0,0,0]])
-                        if self.finger_2_dist_contact.MinDistance < self.minDistance_of_finger and not finger_2_dist_vs_part:
-                            for contact in contact_points:
-                                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            #            finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
+            #            self.finger_2_dist_contact.MinDistance = self.report.minDistance
+            #            self.robot_all_link_collision_check[6]=finger_2_dist_vs_part
+            #            print "finger 2 dist",finger_2_dist_vs_part
+            #            
+            #            contact_points = self.report.contacts
+            #            contact_points_list = np.array([[0,0,0]])
+            #            if self.finger_2_dist_contact.MinDistance < self.minDistance_of_finger and not finger_2_dist_vs_part:
+            #                for contact in contact_points:
+            #                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-                            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                            self.finger_2_dist_contact.ContactPoint = np.mean(contact_points_list,axis=0)
-                            self.flag_finger_2_dist = True
-                        elif not self.flag_finger_2_dist and finger_2_dist_vs_part:
-                            finger_2_joint_angles = finger_2_joint_angles - self.joint_retract_threshold
-                            self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
+            #                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+            #                self.finger_2_dist_contact.ContactPoint = np.mean(contact_points_list,axis=0)
+            #                self.flag_finger_2_dist = True
+            #            elif not self.flag_finger_2_dist and finger_2_dist_vs_part:
+            #                finger_2_joint_angles = finger_2_joint_angles - self.joint_retract_threshold
+            #                self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
-                        finger_3_med_vs_part = self.env.CheckCollision(self.part,self.finger_3_med,report = self.report)
-                        self.finger_3_med_contact.MinDistance = self.report.minDistance
-                        self.robot_all_link_collision_check[7]=finger_3_med_vs_part
-                        print "finger 3 med",finger_3_med_vs_part
-                        
-                        contact_points = self.report.contacts
-                        contact_points_list = np.array([[0,0,0]])
-                        if self.finger_3_med_contact.MinDistance < self.minDistance_of_finger and not finger_3_med_vs_part:
-                            for contact in contact_points:
-                                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            #            finger_3_med_vs_part = self.env.CheckCollision(self.part,self.finger_3_med,report = self.report)
+            #            self.finger_3_med_contact.MinDistance = self.report.minDistance
+            #            self.robot_all_link_collision_check[7]=finger_3_med_vs_part
+            #            print "finger 3 med",finger_3_med_vs_part
+            #            
+            #            contact_points = self.report.contacts
+            #            contact_points_list = np.array([[0,0,0]])
+            #            if self.finger_3_med_contact.MinDistance < self.minDistance_of_finger and not finger_3_med_vs_part:
+            #                for contact in contact_points:
+            #                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-                            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                            self.finger_3_med_contact.ContactPoint = np.mean(contact_points_list,axis=0)
-                            self.flag_finger_3_med = True
-                            self.flag_finger_3_closure = True
-                        elif not self.flag_finger_3_med and finger_3_med_vs_part:
-                            finger_3_joint_angles = finger_3_joint_angles - self.joint_retract_threshold
-                            self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
+            #                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+            #                self.finger_3_med_contact.ContactPoint = np.mean(contact_points_list,axis=0)
+            #                self.flag_finger_3_med = True
+            #                self.flag_finger_3_closure = True
+            #            elif not self.flag_finger_3_med and finger_3_med_vs_part:
+            #                finger_3_joint_angles = finger_3_joint_angles - self.joint_retract_threshold
+            #                self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
-                        finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
-                        self.finger_3_dist_contact.MinDistance = self.report.minDistance                                                 
-                        self.robot_all_link_collision_check[8]=finger_3_dist_vs_part
-                        print "finger 3 dist",finger_3_dist_vs_part
-                        
-                        contact_points = self.report.contacts
-                        contact_points_list = np.array([[0,0,0]])
-                        if self.finger_3_dist_contact.MinDistance < 0.002 and not finger_3_dist_vs_part:
-                            for contact in contact_points:
-                                contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
+            #            finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
+            #            self.finger_3_dist_contact.MinDistance = self.report.minDistance                                                 
+            #            self.robot_all_link_collision_check[8]=finger_3_dist_vs_part
+            #            print "finger 3 dist",finger_3_dist_vs_part
+            #            
+            #            contact_points = self.report.contacts
+            #            contact_points_list = np.array([[0,0,0]])
+            #            if self.finger_3_dist_contact.MinDistance < 0.002 and not finger_3_dist_vs_part:
+            #                for contact in contact_points:
+            #                    contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
-                            contact_points_list = np.delete(contact_points_list, 0,axis=0)
-                            self.finger_3_dist_contact.ContactPoint = np.mean(contact_points_list,axis=0)
-                            self.flag_finger_3_dist = True
-                        elif not self.flag_finger_3_dist and finger_3_dist_vs_part:
-                            finger_3_joint_angles = finger_3_joint_angles - self.joint_retract_threshold
-                            self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
+            #                contact_points_list = np.delete(contact_points_list, 0,axis=0)
+            #                self.finger_3_dist_contact.ContactPoint = np.mean(contact_points_list,axis=0)
+            #                self.flag_finger_3_dist = True
+            #            elif not self.flag_finger_3_dist and finger_3_dist_vs_part:
+            #                finger_3_joint_angles = finger_3_joint_angles - self.joint_retract_threshold
+            #                self.set_hand_joint_angles([finger_1_joint_angles,finger_2_joint_angles,finger_3_joint_angles])
 
-                        
-                        # I am using palm contact for finger 3 proximal joint. I did this because finger 3 proximal is the part of palm
-                        print "finger 3 Proximal",palm_vs_part
-                        
+            #            
+            #            # I am using palm contact for finger 3 proximal joint. I did this because finger 3 proximal is the part of palm
+            #            print "finger 3 Proximal",palm_vs_part
+            #            
 
-                        #overall_collision_check = self.env.CheckCollision(self.robot,report = self.report)
-                        print "overall robot collision with part: ",self.robot_all_link_collision_check.any()
+            #            #overall_collision_check = self.env.CheckCollision(self.robot,report = self.report)
+            #            print "overall robot collision with part: ",self.robot_all_link_collision_check.any()
 
-                        if not (self.robot_all_link_collision_check.any()):
-                            print "Fingers Retracted"
-                            self.finger_retracted = True
+            #            if not (self.robot_all_link_collision_check.any()):
+            #                print "Fingers Retracted"
+            #                self.finger_retracted = True
 
-                        new_time = time.time()
-                        print "time difference",new_time-start_time
-                        if (new_time-start_time)>40:
-                            print "timeout"
-                            self.finger_retracted = True
-                        #elif overall_collision_check:
-                        #    if self.report.plink2.GetParent().GetName()el== ''
+            #            new_time = time.time()
+            #            print "time difference",new_time-start_time
+            #            if (new_time-start_time)>40:
+            #                print "timeout"
+            #                self.finger_retracted = True
+            #            #elif overall_collision_check:
+            #            #    if self.report.plink2.GetParent().GetName()el== ''
 
-                finger_closure = False
-                finger_closure_start = time.time()
-                while not finger_closure:
-                    finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
-                    self.finger_1_dist_contact.MinDistance = self.report.minDistance
-                    #print self.flag_finger_1_closure, self.flag_finger_2_closure, self.flag_finger_3_closure
-                    #print self.robot.GetDOFValues()[11],self.robot.GetDOFValues()[14],self.robot.GetDOFValues()[16]
-                    if self.robot.GetDOFValues()[11] >= 0.82:
-                        self.flag_finger_1_closure = False
-                    if self.robot.GetDOFValues()[14] >= 0.82:
-                        self.flag_finger_2_closure = False
-                    if self.robot.GetDOFValues()[16] >= 0.82:
-                        self.flag_finger_3_closure = False
-                    robot_dof_values = self.robot.GetDOFValues()
-                    if self.finger_1_dist_contact.MinDistance > self.minDistance_of_finger and self.flag_finger_1_closure:
-                        robot_dof_values[11] = robot_dof_values[11] + self.joint_retract_threshold
-                    elif self.finger_1_dist_contact.MinDistance <= self.minDistance_of_finger:
-                        self.flag_finger_1_closure = False
-                    
-                    finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
-                    self.finger_2_dist_contact.MinDistance = self.report.minDistance
-                    if self.finger_2_dist_contact.MinDistance > self.minDistance_of_finger and self.flag_finger_2_closure:
-                        robot_dof_values[14] = robot_dof_values[14] + self.joint_retract_threshold
-                    elif self.finger_2_dist_contact.MinDistance <= self.minDistance_of_finger:
-                        self.flag_finger_2_closure = False
-                        
-                    finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
-                    self.finger_3_dist_contact.MinDistance = self.report.minDistance
-                    if self.finger_3_dist_contact.MinDistance > self.minDistance_of_finger and self.flag_finger_3_closure:
-                        robot_dof_values[16] = robot_dof_values[16] + self.joint_retract_threshold
-                    elif self.finger_3_dist_contact.MinDistance <= self.minDistance_of_finger:
-                        self.flag_finger_3_closure = False
-                    
-                    finger_closure_end = time.time()
-                    self.robot.SetDOFValues(robot_dof_values)
-                    if not self.flag_finger_1_closure and not self.flag_finger_2_closure and not self.flag_finger_3_closure:
-                        print "Executed finger closure"
-                        finger_closure = True
+            #    finger_closure = False
+            #    finger_closure_start = time.time()
+            #    while not finger_closure:
+            #        finger_1_dist_vs_part = self.env.CheckCollision(self.part,self.finger_1_dist,report = self.report)
+            #        self.finger_1_dist_contact.MinDistance = self.report.minDistance
+            #        #print self.flag_finger_1_closure, self.flag_finger_2_closure, self.flag_finger_3_closure
+            #        #print self.robot.GetDOFValues()[11],self.robot.GetDOFValues()[14],self.robot.GetDOFValues()[16]
+            #        if self.robot.GetDOFValues()[11] >= 0.82:
+            #            self.flag_finger_1_closure = False
+            #        if self.robot.GetDOFValues()[14] >= 0.82:
+            #            self.flag_finger_2_closure = False
+            #        if self.robot.GetDOFValues()[16] >= 0.82:
+            #            self.flag_finger_3_closure = False
+            #        robot_dof_values = self.robot.GetDOFValues()
+            #        if self.finger_1_dist_contact.MinDistance > self.minDistance_of_finger and self.flag_finger_1_closure:
+            #            robot_dof_values[11] = robot_dof_values[11] + self.joint_retract_threshold
+            #        elif self.finger_1_dist_contact.MinDistance <= self.minDistance_of_finger:
+            #            self.flag_finger_1_closure = False
+            #        
+            #        finger_2_dist_vs_part = self.env.CheckCollision(self.part,self.finger_2_dist,report = self.report)
+            #        self.finger_2_dist_contact.MinDistance = self.report.minDistance
+            #        if self.finger_2_dist_contact.MinDistance > self.minDistance_of_finger and self.flag_finger_2_closure:
+            #            robot_dof_values[14] = robot_dof_values[14] + self.joint_retract_threshold
+            #        elif self.finger_2_dist_contact.MinDistance <= self.minDistance_of_finger:
+            #            self.flag_finger_2_closure = False
+            #            
+            #        finger_3_dist_vs_part = self.env.CheckCollision(self.part,self.finger_3_dist,report = self.report)
+            #        self.finger_3_dist_contact.MinDistance = self.report.minDistance
+            #        if self.finger_3_dist_contact.MinDistance > self.minDistance_of_finger and self.flag_finger_3_closure:
+            #            robot_dof_values[16] = robot_dof_values[16] + self.joint_retract_threshold
+            #        elif self.finger_3_dist_contact.MinDistance <= self.minDistance_of_finger:
+            #            self.flag_finger_3_closure = False
+            #        
+            #        finger_closure_end = time.time()
+            #        self.robot.SetDOFValues(robot_dof_values)
+            #        if not self.flag_finger_1_closure and not self.flag_finger_2_closure and not self.flag_finger_3_closure:
+            #            print "Executed finger closure"
+            #            finger_closure = True
 
 
             # Save everything to file

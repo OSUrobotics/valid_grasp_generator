@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     rospy
     std_msgs
+    grasp_data_msgs
     message_generation
     sensor_msgs
     )
@@ -21,13 +22,6 @@ find_package(Boost COMPONENTS
     thread
     python
     REQUIRED)
-
-add_message_files(
-    DIRECTORY
-    msg
-    FILES
-    GraspSnapshot.msg
-)
 
 add_service_files(
     DIRECTORY
@@ -70,5 +64,6 @@ link_directories(${PYTHON_LIBRARIES})
 ## Specify libraries to link a library or executable target against
 
 add_library(depth_penetration SHARED src/depth_penetration.cpp)
+add_dependencies(depth_penetration grasp_data_msgs_generate_messages_cpp)
 target_link_libraries(depth_penetration ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${OpenRAVE_LIBRARIES})
 

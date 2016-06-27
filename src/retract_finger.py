@@ -468,21 +468,21 @@ def retract_fingers(env,hand,part):
         
         points = np.delete(points,0,axis=0)
         print "Points that are plotted", points
-#        np.savetxt(objno_subno+'/'+file_name+'_COG.txt',COG_part,delimiter=',')
-#        np.savetxt(objno_subno+'/'+file_name+'_hand_position.txt',hand_position,delimiter=',')
-#        np.savetxt(objno_subno+'/'+file_name+'_hand_quaternion.txt',hand_quaternion,delimiter=',')
-#        np.savetxt(objno_subno+'/'+file_name+'_closeddofvals.txt',output_dof_vals,delimiter=',')
-#        np.savetxt(objno_subno+'/'+file_name+'_contactpoints.txt',points,delimiter=',')
-#        np.savetxt(objno_subno+'/'+file_name+'_JointAngles.txt',hand.GetDOFValues(),delimiter=',')
-#        np.savetxt(objno_subno+'/'+file_name+'_HandTransformation.txt',current_hand_transform,delimiter = ',')
-#        np.savetxt(objno_subno+'/'+file_name+'_ObjTransformation.txt',part.GetTransform(),delimiter = ',')
-#        np.savetxt(objno_subno+'/'+file_name+'_ContactLinkNames.txt',contact_links_names,delimiter = ',',fmt = "%s")
-#        if is_optimal:
-#            csv_writer.writerow(["obj"+str(obj_num),"sub"+str(sub_num),"grasp"+str(grasp_num),"optimal"+str(ext_opt_num), output_dof_vals.tolist(), COG_part.tolist(), points.tolist(),hand_position.tolist(),hand_quaternion.tolist()])
-#        else:
-#            csv_writer.writerow(["obj"+str(obj_num),"sub"+str(sub_num),"grasp"+str(grasp_num),"extreme"+str(ext_opt_num), output_dof_vals.tolist(), COG_part.tolist(), points.tolist(),hand_position.tolist(),hand_quaternion.tolist()])
-#        output_file_id.close()
-#        rospy.set_param("Things_done",True)
+        np.savetxt(objno_subno+'/'+file_name+'_COG.txt',COG_part,delimiter=',')
+        np.savetxt(objno_subno+'/'+file_name+'_hand_position.txt',hand_position,delimiter=',')
+        np.savetxt(objno_subno+'/'+file_name+'_hand_quaternion.txt',hand_quaternion,delimiter=',')
+        np.savetxt(objno_subno+'/'+file_name+'_closeddofvals.txt',output_dof_vals,delimiter=',')
+        np.savetxt(objno_subno+'/'+file_name+'_contactpoints.txt',points,delimiter=',')
+        np.savetxt(objno_subno+'/'+file_name+'_JointAngles.txt',hand.GetDOFValues(),delimiter=',')
+        np.savetxt(objno_subno+'/'+file_name+'_HandTransformation.txt',current_hand_transform,delimiter = ',')
+        np.savetxt(objno_subno+'/'+file_name+'_ObjTransformation.txt',part.GetTransform(),delimiter = ',')
+        np.savetxt(objno_subno+'/'+file_name+'_ContactLinkNames.txt',contact_links_names,delimiter = ',',fmt = "%s")
+        if is_optimal:
+            csv_writer.writerow(["obj"+str(obj_num),"sub"+str(sub_num),"grasp"+str(grasp_num),"optimal"+str(ext_opt_num), output_dof_vals.tolist(), COG_part.tolist(), points.tolist(),hand_position.tolist(),hand_quaternion.tolist()])
+        else:
+            csv_writer.writerow(["obj"+str(obj_num),"sub"+str(sub_num),"grasp"+str(grasp_num),"extreme"+str(ext_opt_num), output_dof_vals.tolist(), COG_part.tolist(), points.tolist(),hand_position.tolist(),hand_quaternion.tolist()])
+        output_file_id.close()
+        rospy.set_param("Things_done",True)
         return points
 
     except:
