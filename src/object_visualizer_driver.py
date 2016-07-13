@@ -83,7 +83,7 @@ def main1():
 	    _ = ctrl.reorient_hand(T_hand, T_obj)
             ctrl.set_joint_angles(joint_angles)
             points = ctrl.avoid_hand_collision()
-            #ctrl.PlotPoints(points)
+            ctrl.PlotPoints(points)
             #user_input = raw_input("Do you want to include dummy hands in the environment? (y/n)?") or "x"
             #if user_input == "n":
             #    ctrl.hide_other_hands()
