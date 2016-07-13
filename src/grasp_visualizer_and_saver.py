@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 from openravepy import *
 import rospy
 import rospkg
@@ -164,6 +165,7 @@ class valid_grasps():
             np.savetxt(objno_subno+'/'+self.file_name+'_HandTransformation.txt',self.robot.GetLinkTransformations()[9],delimiter = ',')
             np.savetxt(objno_subno+'/'+self.file_name+'_ObjTransformation.txt',self.part.GetTransform(),delimiter = ',')
             np.savetxt(objno_subno+'/'+self.file_name+'_ContactLinkNames.txt',contact_links_names,delimiter = ',',fmt = "%s")
+            rospy.set_param("Things_done",True)
 
         except rospy.ROSInterruptException, e:
             print 'exiting', e
