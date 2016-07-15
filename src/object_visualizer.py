@@ -109,6 +109,13 @@ class object_visualizer(object):
         self.plot_points.Close()
         if len(Points) >=1:
             self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,1], drawstyle = 1)
+	
+    def remove_points(self):
+    	self.plot_points.Close()
+    	Points = np.array([0,0,0])
+        self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,1], drawstyle = 1)
+    	self.plot_points.SetShow(0)
+
 
     def Removepoints(self):
         self.plot_points.Close()

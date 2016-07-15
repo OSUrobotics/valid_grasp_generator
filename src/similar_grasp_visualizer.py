@@ -26,14 +26,15 @@ class VisualizeSimilarGrasps(object):
         self.obj_num = 0
         self.filename = None
         self.points = np.array([])
+        self.point_plotted = False
 
     def update_environment(self):
+        user_obj = raw_input('Please Enter object number you want to visualize: ') 
         for folder in self.folder_list:
             fold = folder.split('_')[0]
             self.obj_num = int(fold[3:])
             cluster_no = folder.split('_')[1]
-            user_obj = raw_input('Please Enter object number you want to visualize: ') 
-            if self.obj_num  == user_obj:
+            if self.obj_num  == int(user_obj):
                 files = os.listdir(self.folder_name + "obj" +str(self.obj_num)+"_"+str(cluster_no) +"/")
                 self.ctrl.set_obj(self.obj_num)
                 sorted_files = []
@@ -44,6 +45,7 @@ class VisualizeSimilarGrasps(object):
                 new_files = sorted(sorted_files)
                 
                 for j in range(len(new_files)):
+                    self.point_plotted = False
                     file_name = new_files[j]
                     sub_idx = file_name.find('_sub')
                     grasp_idx = file_name.find('_grasp')
@@ -60,6 +62,7 @@ class VisualizeSimilarGrasps(object):
                     contact_links = np.genfromtxt(f+"_ContactLinkNames.txt",delimiter = ',',dtype = '|S')
                     self.points = np.genfromtxt(f+"_contactpoints.txt",delimiter = ',')
                     self.ctrl.PlotPoints(self.points)
+                    self.point_plotted = True
                     self.filename = 'obj'+str(self.obj_num) +'_'+cluster_no+file_name[sub_idx:]
                     print
                     raw_input('Press Enter to continue')
@@ -73,12 +76,17 @@ class VisualizeSimilarGrasps(object):
         elif data.data == 'reflect_z':
             reflect_along_z_plane(self.ctrl.env,self.ctrl.hand_1)
         elif data.data == 'plot_contact_points':
-            self.ctrl.PlotPoints(self.points)
+            if self.point_plotted:
+                self.ctrl.remove_points()
+                self.point_plotted = False
+            else:
+                self.ctrl.PlotPoints(self.points)
+                self.point_plotted = True
         elif data.data == 'reorient_camera':
             self.camera_transform = np.genfromtxt(self.camera_transform_path,delimiter= ',')
             self.viewer.SetCamera(self.camera_transform)
         elif data.data == 'retract_fingers':
-            self,points,_ = self.ctrl.avoid_hand_collision()
+            self.points,_ = self.ctrl.avoid_hand_collision()
         elif data.data == 'take_picture':
             take_image = rospy.ServiceProxy('take_snap_shot',SnapShot)
             take_image('/home/'+getpass.getuser()+'/similar_grasp_images/'+self.filename+'.jpg')
