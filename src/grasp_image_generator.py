@@ -30,6 +30,14 @@ def set_camera_transform():
     global pub
     pub.publish('reorient_camera')
 
+def takesnapshot():
+	global pub
+	pub.publish('take_picture')
+
+def SaveNewCameraTransform():
+	global pub
+	pub.publish('save_new_camera_transform')
+
 if __name__ == "__main__":
     rospy.init_node('image_generator',anonymous=True)
     rospy.loginfo('Image generator node online')
@@ -47,6 +55,13 @@ if __name__ == "__main__":
     reflect_along_y_axis.grid(row=1,column=1)
     reflect_along_z_axis = Button(master,text = "Reflect: Z", height=10,width=20, command = reflect_along_z_axis)
     reflect_along_z_axis.grid(row=1,column=2)
+
+    take_picture = Button(master, text = "Take Snap Shot", height = 10,width =20, command = takesnapshot)
+    take_picture.grid(row=0,column=3)
+    
+    save_new_camera_transform = Button(master, text = "Save new camera transform", height = 10, width=20, command = SaveNewCameraTransform)
+    save_new_camera_transform.grid(row=1,column=3)
+
     while not rospy.is_shutdown():
         master.update()
 
