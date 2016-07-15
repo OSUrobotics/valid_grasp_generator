@@ -119,7 +119,7 @@ class valid_grasps():
             # Save everything to file
             if not os.path.exists(self.data_saving_folder):
                 os.makedirs(self.data_saving_folder)
-            objno_subno = self.data_saving_folder+'obj'+str(self.obj_num)+'_sub'+str(self.sub_num)
+            objno_subno = self.data_saving_folder+'obj'+str(self.obj_num)#+'_sub'+str(self.sub_num)
             if not os.path.exists(objno_subno):
                 os.makedirs(objno_subno)
 
@@ -165,6 +165,8 @@ class valid_grasps():
             np.savetxt(objno_subno+'/'+self.file_name+'_HandTransformation.txt',self.robot.GetLinkTransformations()[9],delimiter = ',')
             np.savetxt(objno_subno+'/'+self.file_name+'_ObjTransformation.txt',self.part.GetTransform(),delimiter = ',')
             np.savetxt(objno_subno+'/'+self.file_name+'_ContactLinkNames.txt',contact_links_names,delimiter = ',',fmt = "%s")
+            if self.obj_num == 5:
+                raw_input('Press enter to continue')
             rospy.set_param("Things_done",True)
 
         except rospy.ROSInterruptException, e:

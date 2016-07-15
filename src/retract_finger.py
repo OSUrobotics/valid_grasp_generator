@@ -122,7 +122,8 @@ def retract_fingers(env,hand,part):
     finger_retracted = False
 
     hand_all_link_collision_check = np.array([False,False,False,False,False,False,False,False,False])
-    user_input = raw_input("Do you want to retract it? (y/n)") or "y"
+    #########user_input = raw_input("Do you want to retract it? (y/n)") or "y"
+    user_input = 'y'
     points = np.array([[0,0,0]])
     try:
         if user_input == "y":
@@ -328,7 +329,7 @@ def retract_fingers(env,hand,part):
                     
                     contact_points = report.contacts
                     contact_points_list = np.array([[0,0,0]])
-                    if finger_3_dist_contact.MinDistance < 0.002 and not finger_3_dist_vs_part:
+                    if finger_3_dist_contact.MinDistance < minDistance_of_finger and not finger_3_dist_vs_part:
                         for contact in contact_points:
                             contact_points_list = np.append(contact_points_list, [contact.pos],axis = 0)
 
@@ -341,8 +342,6 @@ def retract_fingers(env,hand,part):
 
                     
                     # I am using palm contact for finger 3 proximal joint. I did this because finger 3 proximal is the part of palm
-                    #print "finger 3 Proximal",palm_vs_part
-                    
 
                     #overall_collision_check = env.CheckCollision(hand,report = report)
                     #print "overall hand collision with part: ",hand_all_link_collision_check.any()
@@ -353,7 +352,7 @@ def retract_fingers(env,hand,part):
 
                     new_time = time.time()
                     #print "time difference",new_time-start_time
-                    if (new_time-start_time)>40:
+                    if (new_time-start_time)>20:
                         #print "timeout"
                         finger_retracted = True
                     #elif overall_collision_check:
@@ -468,22 +467,22 @@ def retract_fingers(env,hand,part):
         
         points = np.delete(points,0,axis=0)
         print "Points that are plotted", points
-        np.savetxt(objno_subno+'/'+file_name+'_COG.txt',COG_part,delimiter=',')
-        np.savetxt(objno_subno+'/'+file_name+'_hand_position.txt',hand_position,delimiter=',')
-        np.savetxt(objno_subno+'/'+file_name+'_hand_quaternion.txt',hand_quaternion,delimiter=',')
-        np.savetxt(objno_subno+'/'+file_name+'_closeddofvals.txt',output_dof_vals,delimiter=',')
-        np.savetxt(objno_subno+'/'+file_name+'_contactpoints.txt',points,delimiter=',')
-        np.savetxt(objno_subno+'/'+file_name+'_JointAngles.txt',hand.GetDOFValues(),delimiter=',')
-        np.savetxt(objno_subno+'/'+file_name+'_HandTransformation.txt',current_hand_transform,delimiter = ',')
-        np.savetxt(objno_subno+'/'+file_name+'_ObjTransformation.txt',part.GetTransform(),delimiter = ',')
-        np.savetxt(objno_subno+'/'+file_name+'_ContactLinkNames.txt',contact_links_names,delimiter = ',',fmt = "%s")
-        if is_optimal:
-            csv_writer.writerow(["obj"+str(obj_num),"sub"+str(sub_num),"grasp"+str(grasp_num),"optimal"+str(ext_opt_num), output_dof_vals.tolist(), COG_part.tolist(), points.tolist(),hand_position.tolist(),hand_quaternion.tolist()])
-        else:
-            csv_writer.writerow(["obj"+str(obj_num),"sub"+str(sub_num),"grasp"+str(grasp_num),"extreme"+str(ext_opt_num), output_dof_vals.tolist(), COG_part.tolist(), points.tolist(),hand_position.tolist(),hand_quaternion.tolist()])
-        output_file_id.close()
-        rospy.set_param("Things_done",True)
-        return points
+        #np.savetxt(objno_subno+'/'+file_name+'_COG.txt',COG_part,delimiter=',')
+        #np.savetxt(objno_subno+'/'+file_name+'_hand_position.txt',hand_position,delimiter=',')
+        #np.savetxt(objno_subno+'/'+file_name+'_hand_quaternion.txt',hand_quaternion,delimiter=',')
+        #np.savetxt(objno_subno+'/'+file_name+'_closeddofvals.txt',output_dof_vals,delimiter=',')
+        #np.savetxt(objno_subno+'/'+file_name+'_contactpoints.txt',points,delimiter=',')
+        #np.savetxt(objno_subno+'/'+file_name+'_JointAngles.txt',hand.GetDOFValues(),delimiter=',')
+        #np.savetxt(objno_subno+'/'+file_name+'_HandTransformation.txt',current_hand_transform,delimiter = ',')
+        #np.savetxt(objno_subno+'/'+file_name+'_ObjTransformation.txt',part.GetTransform(),delimiter = ',')
+        #np.savetxt(objno_subno+'/'+file_name+'_ContactLinkNames.txt',contact_links_names,delimiter = ',',fmt = "%s")
+        #if is_optimal:
+        #    csv_writer.writerow(["obj"+str(obj_num),"sub"+str(sub_num),"grasp"+str(grasp_num),"optimal"+str(ext_opt_num), output_dof_vals.tolist(), COG_part.tolist(), points.tolist(),hand_position.tolist(),hand_quaternion.tolist()])
+        #else:
+        #    csv_writer.writerow(["obj"+str(obj_num),"sub"+str(sub_num),"grasp"+str(grasp_num),"extreme"+str(ext_opt_num), output_dof_vals.tolist(), COG_part.tolist(), points.tolist(),hand_position.tolist(),hand_quaternion.tolist()])
+        #output_file_id.close()
+        #rospy.set_param("Things_done",True)
+        return points,contact_links_names
 
     except:
         print "Exiting"

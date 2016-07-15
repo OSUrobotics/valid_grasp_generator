@@ -4,7 +4,6 @@ import numpy as np
 from openravepy import *
 import transformations
 from math import *
-from stl_generator import *
 
 def get_centroid(part):
     part_link = part.GetLinks()[0]
