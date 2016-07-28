@@ -11,6 +11,7 @@ from Tkinter import *
 from symmetricize import reflect_along_x_plane, reflect_along_y_plane, reflect_along_z_plane
 import rospkg
 import getpass
+from stlwriter import *
 
 
 class VisualizeSimilarGrasps(object):
@@ -65,7 +66,11 @@ class VisualizeSimilarGrasps(object):
                     self.point_plotted = True
                     self.filename = 'obj'+str(self.obj_num) +'_'+cluster_no+file_name[sub_idx:]
                     print
-                    raw_input('Press Enter to continue')
+                    user_inp = raw_input('Do you want to write stl(y/n)?') or 'y' 
+                    if user_inp == 'y':
+                        self.generate_stl(f+'.stl')
+                    
+                        
 
     def execute_command(self,data):
         rospy.loginfo('Command Received: %s',data.data)
@@ -93,6 +98,46 @@ class VisualizeSimilarGrasps(object):
         elif data.data == 'save_new_camera_transform':
             np.savetxt(self.camera_transform_path,self.viewer.GetCameraTransform(),delimiter=',')
 
+    def get_robot_points(self,robot):
+        links = [l for l in robot.GetLinks() if 'bhand' in l.GetName()]
+        all_vertices = []
+        all_faces = []
+        ind = 0
+        for link in links:
+            vertices = link.GetCollisionData().vertices
+            faces = link.GetCollisionData().indices
+            #print "faces: ", len(faces), " vertices: ", len(vertices)
+            if ind == 0:
+                faces = np.add(faces,ind)
+            else:
+                faces = np.add(faces,ind+1)
+            
+            try:
+                ind = faces[-1][-1]
+            except:
+                pass
+            link_pose = poseFromMatrix(link.GetTransform())
+            transform_vertices = poseTransformPoints(link_pose, vertices)
+            all_vertices.extend(transform_vertices)
+            all_faces.extend(faces.tolist())
+
+        return all_vertices, all_faces
+
+    def generate_stl(self,fname,robot=None,env=None):
+        if robot == None:
+            robot = self.ctrl.hand_1
+        if env == None:
+            env = self.ctrl.env
+
+        [points, faces] = self.get_robot_points(robot)
+        matrix = []
+        for i in range(len(faces)):
+            matrix.append([points[faces[i][0]],points[faces[i][1]],points[faces[i][2]]])
+
+        with open(fname, 'wb') as fp:
+            writer = Binary_STL_Writer(fp)
+            writer.add_faces(matrix)
+            writer.close()
 
 
 
