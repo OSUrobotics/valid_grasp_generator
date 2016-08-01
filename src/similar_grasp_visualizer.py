@@ -99,6 +99,7 @@ class VisualizeSimilarGrasps(object):
             np.savetxt(self.camera_transform_path,self.viewer.GetCameraTransform(),delimiter=',')
 
     def get_robot_points(self,robot):
+        robot.SetTransform(np.eye(4))
         links = [l for l in robot.GetLinks() if 'bhand' in l.GetName()]
         all_vertices = []
         all_faces = []
