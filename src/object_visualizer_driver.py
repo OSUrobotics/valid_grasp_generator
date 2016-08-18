@@ -9,7 +9,7 @@ from scipy import misc
 from valid_grasp_generator.srv import *
 from get_intermediate_points import get_intermediate_points
 from angle_format_changer import *
-transform_path = os.path.expanduser("~") + "/grasping_data"
+transform_path = os.path.expanduser("~") + "/grasping_data/all_obj_transformation"
 #transform_path = os.path.expanduser("~") + "/bad_grasps"
 ctrl = None
 
@@ -52,15 +52,18 @@ def main1():
     global transform_path, ctrl
     ctrl = object_visualizer()
     take_image = rospy.ServiceProxy('take_snap_shot', SnapShot)
-    alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
+    #alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
     while not rospy.is_shutdown():
-    	obj_num = int(raw_input("Obj num: "))
-	sub_num = int(raw_input("Sub num: "))
-        if len(obj_num)==0:
+        obj_num_string = raw_input("Obj num: ")
+	sub_num_string = raw_input("Sub num: ")
+        if len(obj_num_string)==0:
+            print "Please Enter valid Object number and subject number OR ctrl-\ to exit"
             continue
+    	obj_num = int(obj_num_string)
+    	sub_num = int(sub_num_string)
 
-	files = os.listdir(transform_path+ "/"+ "obj" +str(obj_num)+"_sub"+str(sub_num)+"/")
-        print obj_num
+	#files = os.listdir(transform_path+ "/"+ "obj" +str(obj_num)+"_sub"+str(sub_num)+"/")
+	files = os.listdir(transform_path+ "/"+ "obj" +str(obj_num)+'/')
         sorted_files = []
         for fname in files:
             if "HandTransformation" in fname:
@@ -70,7 +73,8 @@ def main1():
 	ctrl.set_obj(obj_num)
 	for f in new_files:
             idx = f.find('_Hand')
-            f = transform_path + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + f[:idx]
+            #f = transform_path + "/" + "obj"+str(obj_num)+"_sub"+str(sub_num) + "/" + f[:idx]
+            f = transform_path + "/" + "obj"+str(obj_num)+ "/" + f[:idx]
 	    rospy.loginfo("Showing " + f)
 	    T_hand = np.genfromtxt(f+"_HandTransformation.txt",delimiter = ',')
             T_obj = np.genfromtxt(f+"_ObjTransformation.txt",delimiter = ',')
@@ -79,8 +83,8 @@ def main1():
             #joint_angles = np.append(np.array([0,0]),joint_angles) # for adept arm
 	    _ = ctrl.reorient_hand(T_hand, T_obj)
             ctrl.set_joint_angles(joint_angles)
-            points = ctrl.avoid_hand_collision()
-            #ctrl.PlotPoints(points)
+            points,_ = ctrl.avoid_hand_collision()
+            ctrl.PlotPoints(points)
             #user_input = raw_input("Do you want to include dummy hands in the environment? (y/n)?") or "x"
             #if user_input == "n":
             #    ctrl.hide_other_hands()

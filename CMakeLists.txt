@@ -7,6 +7,7 @@ project(valid_grasp_generator)
 set(Boost_USE_STATIC_LIBS OFF)  
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
+find_package(OpenRAVE REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     rospy
@@ -16,7 +17,6 @@ find_package(catkin REQUIRED COMPONENTS
     sensor_msgs
     )
 
-find_package(OpenRAVE REQUIRED)
 find_package(Boost COMPONENTS
     system
     thread

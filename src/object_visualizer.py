@@ -78,11 +78,14 @@ class object_visualizer(object):
             self.hand_2.SetVisible(1)
             self.hand_2.SetTransform(self.hand_1.GetTransform())
             self.hand_2.SetDOFValues(self.hand_1.GetDOFValues())
+            return self.hand_2
+
         if hand_num == '2':
             print "Hand added"
             self.hand_3.SetVisible(1)
             self.hand_3.SetTransform(self.hand_1.GetTransform())
             self.hand_3.SetDOFValues(self.hand_1.GetDOFValues())
+            return self.hand_3
             
     def set_joint_angles(self,joint_angles):
         self.hand_1.SetDOFValues(joint_angles)
@@ -90,9 +93,14 @@ class object_visualizer(object):
     def get_env(self):
         return self.env
 
-    def avoid_hand_collision(self):
-        points = retract_fingers(self.env,self.hand_1,self.obj)
-        return points
+    def avoid_hand_collision(self,hand_num=1):
+        if hand_num == 2:
+            points,contact_link_names = retract_fingers(self.env,self.hand_2,self.obj)
+        elif hand_num == 3:
+            points,contact_link_names = retract_fingers(self.env,self.hand_3,self.obj)
+        else:
+            points,contact_link_names = retract_fingers(self.env,self.hand_1,self.obj)
+        return points,contact_link_names
 
     def set_hand_transformation(self,transformation):
         self.hand_1.SetTransform(transformation)
@@ -101,6 +109,13 @@ class object_visualizer(object):
         self.plot_points.Close()
         if len(Points) >=1:
             self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,1], drawstyle = 1)
+	
+    def remove_points(self):
+    	self.plot_points.Close()
+    	Points = np.array([0,0,0])
+        self.plot_points = self.env.plot3(points = Points,pointsize=0.008,colors = [1,0,1], drawstyle = 1)
+    	self.plot_points.SetShow(0)
+
 
     def Removepoints(self):
         self.plot_points.Close()
