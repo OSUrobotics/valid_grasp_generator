@@ -165,7 +165,8 @@ if __name__=="__main__":
     done_grasp_matrix = np.genfromtxt(transform_path+'/done_grasp_testing.csv',delimiter=',')
     env = ctrl.get_env()
     env.Load(valid_grasp_dir+'/models/robots/barrettwam.robot.xml')
-    robot = env.GetRobots()[1]
+    robot = env.GetRobots()[3]
+    print robot 
     manip = robot.GetActiveManipulator()
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype = IkParameterization.Type.Transform6D)
     if not ikmodel.load():

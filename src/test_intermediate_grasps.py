@@ -168,7 +168,7 @@ if __name__=="__main__":
 
     env = ctrl.get_env()
     env.Load(valid_grasp_dir+'/models/robots/barrettwam.robot.xml')
-    robot = env.GetRobots()[1]
+    robot = env.GetRobots()[3]
     manip = robot.GetActiveManipulator()
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype = IkParameterization.Type.Transform6D)
     if not ikmodel.load():
