@@ -11,6 +11,7 @@ from get_intermediate_points import get_intermediate_points
 from angle_format_changer import *
 from Tkinter import *
 from symmetricize import reflect_along_x_plane, reflect_along_y_plane, reflect_along_z_plane
+from get_similar_contact_score import get_similar_contact_score
 
 transform_path = os.path.expanduser("~") + "/grasping_data"
 #transform_path = os.path.expanduser("~") + "/bad_grasps"
@@ -20,8 +21,11 @@ if __name__ == "__main__":
     rospy.init_node('similar_grasp_generator',anonymous = True)
     ctrl = object_visualizer()
     check_contact_links = True
-    #joint_angle_threshold = 0.25 * ctrl.hand_1.GetDOFLimits()[1]
-    joint_angle_threshold = np.array([1,1,0.3,0.4,0.5,0.3,0.4,0.5,0.4,0.5])
+    #joint_angle_threshold = 0.4 * ctrl.hand_1.GetDOFLimits()[1]
+    #joint_angle_threshold = np.array([1,1,0.2,0.3,0.4,0.2,0.3,0.4,0.3,0.4])
+    print ctrl.hand_1.GetLinks()
+    #joint_angle_threshold = np.dot(0.7,np.array([1,1,0.2,0.3,0.4,0.2,0.3,0.4,0.3,0.4]))
+    joint_angle_threshold = np.array([1,1,0.4,0.5,0.6,0.4,0.5,0.6,0.5,0.6])
     direction_variance = 0.1
     #take_image = rospy.ServiceProxy('take_snap_shot', SnapShot)
     #alignment_viewer_sub = rospy.Subscriber("/openrave_grasp_view", Int32MultiArray, view_alignment_cb)
@@ -32,7 +36,7 @@ if __name__ == "__main__":
      
     for folder in folder_list:
         obj_num = int(folder[3:])
-        if obj_num == 17:#[2,4,5,15,17]:
+        if obj_num == 5:#[2,4,5,15,17]:
             cluster_number = 0
             files = os.listdir(folder_name + "obj" +str(obj_num) +"/")
             ctrl.set_obj(obj_num)
@@ -107,13 +111,19 @@ if __name__ == "__main__":
                     target_contact_links = np.genfromtxt(f+"_ContactLinkNames.txt",delimiter = ',',dtype = '|S')
                     ctrl.set_joint_angles(target_joint_angles)
                     rospy.loginfo('Target joint angles and contact links calculated')
-                    if (target_contact_links == old_prime_contact_links).all():
+                    similar_contact_score = get_similar_contact_score(old_prime_contact_links,target_contact_links)
+                    if similar_contact_score > 70:
                         same_contact_links = True
+
                     
                     rospy.loginfo('Target has same contact links: ')
                     print same_contact_links
+                    raw_input('Press Enter to continue')
                     print
                     difference_between_joint_angles = np.abs(np.subtract(old_prime_joint_angles,target_joint_angles))
+                    print old_prime_joint_angles
+                    print target_joint_angles
+                    print difference_between_joint_angles
 
                     print "Similar Joint angles: ",difference_between_joint_angles<joint_angle_threshold
                     if (difference_between_joint_angles<joint_angle_threshold).all():
