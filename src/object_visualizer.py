@@ -161,7 +161,7 @@ class object_visualizer(object):
 		self.standardize_ball()
 	elif self.obj_num == 5 or self.obj_num == 6:
 		self.standardize_box()
-	elif self.obj_num == 15:
+	elif self.obj_num == 15 or self.obj_num == 4:
 		# The chunk of foam requires a little manual flipping due to its cylindrical top-down symmetry
 		self.standardize_foam()
 	else:

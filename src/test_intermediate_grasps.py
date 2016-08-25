@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 from object_visualizer import *
 from std_msgs.msg import Int32MultiArray
 import numpy as np

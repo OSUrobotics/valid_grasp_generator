@@ -73,6 +73,8 @@ class valid_grasps():
         self.palm_surface_tranform = self.palm_surface_link.GetTransform()
         #self.plot_points_handler = self.env.plot3(np.array([1,1,1]),2)
         self.robot_dof_limits = list(self.robot.GetDOFLimits())
+        self.minDistance_of_finger = 0.0015
+
 
         self.palm_contact = ContPointWithDistance("palm contact")
         self.finger_1_prox_contact = ContPointWithDistance("finger_1_prox")
@@ -154,7 +156,7 @@ class valid_grasps():
             
             contact_links_names = np.array([], dtype = "|S")
             for contact in self.ContactPointWithDistance:
-                if not contact.ContactPoint.all() == 0:
+                if not contact.ContactPoint.all() == 0 and contact.MinDistance < self.minDistance_of_finger:
                     contact_links_names = np.append(contact_links_names,str(contact))
                     self.points = np.append(self.points,[contact.ContactPoint],axis=0)
             
@@ -165,8 +167,6 @@ class valid_grasps():
             np.savetxt(objno_subno+'/'+self.file_name+'_HandTransformation.txt',self.robot.GetLinkTransformations()[9],delimiter = ',')
             np.savetxt(objno_subno+'/'+self.file_name+'_ObjTransformation.txt',self.part.GetTransform(),delimiter = ',')
             np.savetxt(objno_subno+'/'+self.file_name+'_ContactLinkNames.txt',contact_links_names,delimiter = ',',fmt = "%s")
-            if self.obj_num == 5:
-                raw_input('Press enter to continue')
             rospy.set_param("Things_done",True)
 
         except rospy.ROSInterruptException, e:
