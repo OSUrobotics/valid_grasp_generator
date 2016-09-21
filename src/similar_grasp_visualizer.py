@@ -66,9 +66,10 @@ class VisualizeSimilarGrasps(object):
                     self.point_plotted = True
                     self.filename = 'obj'+str(self.obj_num) +'_'+cluster_no+file_name[sub_idx:]
                     print
-                    user_inp = raw_input('Do you want to write stl(y/n)?') or 'y' 
-                    if user_inp == 'y':
-                        self.generate_stl(f+'.stl')
+                    raw_input('Press Enter to continue')
+                    #user_inp = raw_input('Do you want to write stl(y/n)?') or 'y' 
+                    #if user_inp == 'y':
+                    #    self.generate_stl(f+'.stl')
                     
                         
 
