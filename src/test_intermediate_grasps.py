@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 from object_visualizer import *
 from std_msgs.msg import Int32MultiArray
 import numpy as np
@@ -150,7 +151,7 @@ def shake_wam(ros_dict):
 
 
 if __name__=="__main__":
-    rospy.init_node('test_on_robot',anonymous = True )
+    rospy.init_node('test_on_#robot',anonymous = True )
     # Jackson's code
     
     ros_dict = {}
@@ -173,8 +174,16 @@ if __name__=="__main__":
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype = IkParameterization.Type.Transform6D)
     if not ikmodel.load():
         ikmodel.autogenerate()
+    #env.Load(valid_grasp_dir+'/models/#robots/barrettwam.#robot.xml')
+    ##robot = env.GetRobots()[3]
+    #print #robot
+    #manip = #robot.GetActiveManipulator()
+    #ikmodel = databases.inversekinematics.InverseKinematicsModel(#robot,iktype = IkParameterization.Type.Transform6D)
+    #if not ikmodel.load():
+    #    ikmodel.autogenerate()
 
     alpha_vector = np.array([0.2,0.8])
+
     for csv_file in files:
         similar_grasp_matrix = np.genfromtxt(folder_name+csv_file,delimiter=',')
         print similar_grasp_matrix
@@ -208,11 +217,14 @@ if __name__=="__main__":
             HandTransformations[i] = ctrl.GetHandTransform()
             print HandTransformations[i]
             ctrl.set_joint_angles(joint_angles)
+            ctrl.avoid_hand_collision()
+
+            raw_input('Press Enter to continue : ')
     
         for alpha in alpha_vector:
             print "File name: ",csv_file
-	    robot_transform = np.genfromtxt(valid_grasp_dir+'/essential_files/essential_transform/obj'+str(obj_num)+'_robot_transform.csv',delimiter = ',')
-	    robot.SetTransform(robot_transform)
+	    #robot_transform = np.genfromtxt(valid_grasp_dir+'/essential_files/essential_transform/obj'+str(obj_num)+'_#robot_transform.csv',delimiter = ',')
+	    #robot.SetTransform(#robot_transform)
 
             child_hand_transformation = GetIntermediateTransformation(HandTransformations,alpha)
             child_joint_angles = GetJointAngles(JointAngles,alpha)
@@ -230,26 +242,30 @@ if __name__=="__main__":
             hand_cmd.f2 = finger_2_dof_value 
             hand_cmd.f3 = finger_3_dof_value 
             hand_cmd.spread = finger_spread 
-		
-            user_in = raw_input("Press Enter to continue")
-            
-            Tgoal = ctrl.hand_1.GetLinkTransformations()[2] 
-            palm_perpendicular_vector = get_palm_perpendicular_vector(ctrl.hand_1)
-            Tgoal[0:3,3] = np.add(Tgoal[0:3,3], np.dot(0.062,palm_perpendicular_vector))
-            sol_1 = manip.FindIKSolution(Tgoal, IkFilterOptions.IgnoreEndEffectorCollisions)
-            print "solution 1", sol_1
-            Tgoal[0:3,3] = np.add(Tgoal[0:3,3], np.dot(-2*0.062,palm_perpendicular_vector))
-            sol_2 = manip.FindIKSolution(Tgoal, IkFilterOptions.IgnoreEndEffectorCollisions)
-            print "solution 2", sol_2
-            robot.SetDOFValues(sol_2,manip.GetArmIndices())
-            user_in = raw_input("Do you want to move practical robot? (y/n)") or "n"
-            if user_in == "y":
-                success_vector = run_trial(ros_dict, sol_1, sol_2, hand_cmd)
-            	np.savetxt(transform_path+"/extreme_testing/"+ object_names[0] + "_alpha_"+str(alpha)+"_"+object_names[1]+'.csv',success_vector,delimiter=',')
 
-    	    raw_input("Press [Enter] to continue")
+            ctrl.avoid_hand_collision()
+
+            raw_input('Press Enter to continue : ')
+		
+            #user_in = raw_input("Press Enter to continue")
+            #
+            #Tgoal = ctrl.hand_1.GetLinkTransformations()[2] 
+            #palm_perpendicular_vector = get_palm_perpendicular_vector(ctrl.hand_1)
+            #Tgoal[0:3,3] = np.add(Tgoal[0:3,3], np.dot(0.062,palm_perpendicular_vector))
+            ##sol_1 = manip.FindIKSolution(Tgoal, IkFilterOptions.IgnoreEndEffectorCollisions)
+            ##print "solution 1", sol_1
+            #Tgoal[0:3,3] = np.add(Tgoal[0:3,3], np.dot(-2*0.062,palm_perpendicular_vector))
+            #sol_2 = manip.FindIKSolution(Tgoal, IkFilterOptions.IgnoreEndEffectorCollisions)
+            #print "solution 2", sol_2
+            #robot.SetDOFValues(sol_2,manip.GetArmIndices())
+            #user_in = raw_input("Do you want to move practical #robot? (y/n)") or "n"
+            #if user_in == "y":
+            #    success_vector = run_trial(ros_dict, sol_1, sol_2, hand_cmd)
+            #	np.savetxt(transform_path+"/extreme_testing/"+ object_names[0] + "_alpha_"+str(alpha)+"_"+object_names[1]+'.csv',success_vector,delimiter=',')
+
+    	    #raw_input("Press [Enter] to continue")
     
-    	user_input = raw_input("Do you want to move the file? (y/n)") or 'y'
+    	user_input = raw_input("Do you want to move the file? (y/n)") or 'n'
     	if user_input == 'y':
     	    os.rename(folder_name+csv_file,transform_path+"/similar_grasp_done/"+object_names[0] + "_"+object_names[1]+'.csv')
     while not rospy.is_shutdown():
