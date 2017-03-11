@@ -151,7 +151,7 @@ def shake_wam(ros_dict):
 
 
 if __name__=="__main__":
-    rospy.init_node('test_on_#robot',anonymous = True )
+    rospy.init_node('test_on_robot',anonymous = True )
     # Jackson's code
     
     ros_dict = {}

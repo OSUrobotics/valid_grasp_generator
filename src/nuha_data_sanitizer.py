@@ -10,13 +10,34 @@ import sys
 import os
 import rospy
 import numpy as np
+import math
+import openravepy
 
 transform_path = '/media/sonny/FA648F24648EE2AD/Old Files/grasping_data/all_obj_transformation'
+save_folder = '/home/sonny/grasp_study_2015/grasp_transforms/nuha_reoriented'
+
+def findangle(p1,p2):
+    #Find theta of rotation using dot product
+    theta = math.acos((p1[0]*p2[0]+p1[1]*p2[1])/(math.hypot(p1[0],p1[1])*math.hypot(p2[0],p2[1])))
+    return theta
 
 ## Nuha's function goes here!
 ## Input: A point on the center of the palm (maybe an axis?)
 ## Output: A transformation that will rotate the hand to
 ##  lie along that axis.
+#find the angle of rotation
+def nuha_reorient(pt):
+    a = [1,0]
+    b= [pt[0],pt[2]]
+    print pt
+    angle= findangle(a,b)
+    if b[1] > 0:
+       new_angle = angle
+    else:
+       new_angle = 2*math.pi - angle
+
+    print 'nuha\'s angle: ', new_angle
+    return new_angle
 
 # Function: get_user_input()
 # Description: obtains object and subject number for viewing
@@ -55,6 +76,7 @@ if __name__ == "__main__":
 
     # Create the environment with the hand
     obj_vis =  objvis()
+    world_axes = obj_vis.gt.drawTransform(np.eye(4))
 
     while not rospy.is_shutdown():
         try:
@@ -68,12 +90,26 @@ if __name__ == "__main__":
         transform_files = get_tf_files(obj_num)
         for f in transform_files:
             t_hand, t_obj, joint_angles = get_grasp_parameters(f)
+            print "File: ", f
             print "t_hand: ", t_hand, "t_obj: ", t_obj
             obj_vis.reorient_hand(t_hand, t_obj)
             obj_vis.set_joint_angles(joint_angles)
-            points,_ = obj_vis.avoid_hand_collision()
             raw_input('Grasp set up. Press [Enter] to continue')
 
             # Fix the grasp
             # TODO: Nuha's code goes here
+            palm_pt = obj_vis.get_palm_point()
+            print "Palm point: ", palm_pt
+            fix_angle = nuha_reorient(palm_pt)
+            fix_mat = openravepy.matrixFromAxisAngle(fix_angle * np.array([0,1,0]))
+            print "fix transform: ", fix_mat
+            t_hand = np.dot(fix_mat, t_hand)
+            obj_vis.reorient_hand(t_hand, np.eye(4)) 
             raw_input('Grasp reoriented! Press [Enter] to continue')
+            print "Changing finger position to avoid contact."
+            points,_ = obj_vis.avoid_hand_collision()
+
+            # Save the output file
+            out_f_name = f.replace('HandTransformation', 'prime_HandTransformation')
+            t_hand = obj_vis.hand_1.GetTransform()
+            np.savetxt('%s/%s' % (save_folder, out_f_name), t_hand, delimiter = ',')
