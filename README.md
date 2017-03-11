@@ -17,3 +17,17 @@ Before running the similar_grasp_generator.launch please run the command roscore
 
 You have to run similar_grasp_generator.launch before running object_visualizer_driver.py as the similar_grasp_generator will save the transformation of the BarrettHand and object a folder.
 
+
+Roslaunch valid_grasp_generator generate_valid_grasp.launch
+1) This requires a folder names grasping_data on the Home location. This folder is backed up somewhere on the robot grasp folder. I can't remember exact location now.
+2) What it does?
+	It looks through all the grasps that we collected in summer 2014. It identifies the collision between the robot hand and the 3D objects we have. After detecting the collision, It moves the fingers and robot hand little bit backwards in order to avoid the collision in Openrave simulator.
+
+Rosrun valid_grasp_generator cluster_similar_grasp.py
+1) This program clusters the similar grasp together. 
+
+Roslaunch valid_grasp_generator similar_grasp_image_generator.launch
+1) this program can be used to save the image generated from the similar grasp cluster
+
+
+
